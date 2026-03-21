@@ -1,0 +1,11 @@
+{
+  "name": "flowboard",
+  "version": "1.0.0",
+  "description": "FlowBoard - Çok Sektörlü Kanban",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2"
+  }
+}

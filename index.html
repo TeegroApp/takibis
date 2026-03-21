@@ -1,0 +1,2301 @@
+<!DOCTYPE html>
+<html lang="tr" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FlowBoard v3 — Çok Sektörlü Kanban</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700;800&family=Geist+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+/* ═══════════ THEME TOKENS ═══════════ */
+[data-theme="dark"]{
+  --bg0:#080B12;--bg1:#0D1120;--bg2:#121828;--bg3:#18203A;--bg4:#1E2848;--bg5:#253058;
+  --glass:rgba(255,255,255,.04);--glass2:rgba(255,255,255,.07);--glass3:rgba(255,255,255,.12);
+  --rim:rgba(255,255,255,.07);--rim2:rgba(255,255,255,.13);--rim3:rgba(255,255,255,.22);
+  --t0:#FFFFFF;--t1:#E8EDF8;--t2:#7A85A3;--t3:#3D4560;--t4:#1E2640;
+  --sh:0 4px 24px rgba(0,0,0,.5);--sh-lg:0 12px 48px rgba(0,0,0,.6);
+}
+[data-theme="light"]{
+  --bg0:#F0F2F8;--bg1:#FFFFFF;--bg2:#F8F9FC;--bg3:#EEF0F8;--bg4:#E4E8F4;--bg5:#D8DCF0;
+  --glass:rgba(0,0,0,.03);--glass2:rgba(0,0,0,.06);--glass3:rgba(0,0,0,.1);
+  --rim:rgba(0,0,0,.08);--rim2:rgba(0,0,0,.14);--rim3:rgba(0,0,0,.22);
+  --t0:#0D1020;--t1:#1A2040;--t2:#5A6080;--t3:#9AA0B8;--t4:#C8CCE0;
+  --sh:0 4px 24px rgba(0,0,0,.1);--sh-lg:0 12px 48px rgba(0,0,0,.14);
+}
+:root{
+  --ff:'Geist',system-ui,sans-serif;--ffm:'Geist Mono',monospace;
+  --rad:10px;--radlg:16px;--radxl:22px;--trans:.18s ease;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html{font-size:14px}
+body{font-family:var(--ff);background:var(--bg0);color:var(--t1);min-height:100vh;overflow-x:hidden;transition:background var(--trans),color var(--trans)}
+::-webkit-scrollbar{width:4px;height:4px}
+::-webkit-scrollbar-thumb{background:var(--bg5);border-radius:2px}
+a{text-decoration:none;color:inherit}
+button{cursor:pointer;font-family:var(--ff)}
+input,textarea,select{font-family:var(--ff)}
+
+/* ═══════════ SCREENS ═══════════ */
+.screen{display:none;min-height:100vh}
+.screen.active{display:flex}
+
+/* ═══════════ LOGIN ═══════════ */
+#s-login{align-items:center;justify-content:center;flex-direction:column;padding:24px;background:var(--bg0);position:relative;overflow:hidden}
+#s-login::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse 60% 50% at 50% -10%,rgba(61,127,255,.12),transparent 60%);pointer-events:none}
+.login-box{width:100%;max-width:440px;background:var(--bg1);border:1px solid var(--rim2);border-radius:var(--radxl);overflow:hidden;box-shadow:var(--sh-lg);position:relative}
+.login-box::before{content:'';position:absolute;top:0;left:20%;right:20%;height:1px;background:linear-gradient(90deg,transparent,rgba(61,127,255,.4),transparent)}
+.login-head{padding:32px 32px 20px;text-align:center}
+.login-logo{width:48px;height:48px;border-radius:14px;background:linear-gradient(135deg,#3D7FFF,#7C3AED);display:flex;align-items:center;justify-content:center;font-size:24px;margin:0 auto 14px;box-shadow:0 8px 24px rgba(61,127,255,.3)}
+.login-title{font-size:20px;font-weight:800;color:var(--t0);margin-bottom:4px}
+.login-sub{font-size:13px;color:var(--t2)}
+.role-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:0 32px 20px}
+.role-card{padding:16px 14px;border:1.5px solid var(--rim);border-radius:var(--radlg);cursor:pointer;transition:all .2s;text-align:center;position:relative;overflow:hidden;background:var(--glass)}
+.role-card:hover{border-color:var(--rim2);transform:translateY(-2px)}
+.role-card.sel{border-color:currentColor}
+.rc-admin{color:#3D7FFF}.rc-admin.sel{box-shadow:0 4px 20px rgba(61,127,255,.2)}
+.rc-manager{color:#00C87A}.rc-manager.sel{box-shadow:0 4px 20px rgba(0,200,122,.2)}
+.rc-member{color:#F59E0B}.rc-member.sel{box-shadow:0 4px 20px rgba(245,158,11,.2)}
+.rc-viewer{color:#A855F7}.rc-viewer.sel{box-shadow:0 4px 20px rgba(168,85,247,.2)}
+.rc-icon{font-size:22px;margin-bottom:8px;display:block}
+.rc-name{font-size:13px;font-weight:700;color:var(--t0);margin-bottom:2px}
+.rc-desc{font-size:11px;color:var(--t2)}
+.rc-check{position:absolute;top:8px;right:8px;width:16px;height:16px;border-radius:50%;background:currentColor;display:none;align-items:center;justify-content:center;font-size:9px;color:white;font-weight:900}
+.role-card.sel .rc-check{display:flex}
+.login-fields{padding:0 32px 14px}
+.lf{display:flex;flex-direction:column;gap:5px;margin-bottom:12px}
+.lf label{font-size:11px;font-weight:600;letter-spacing:.5px;text-transform:uppercase;color:var(--t2)}
+.lf input{background:var(--bg2);border:1px solid var(--rim);border-radius:8px;padding:10px 14px;font-size:13px;color:var(--t1);outline:none;transition:border-color var(--trans)}
+.lf input:focus{border-color:rgba(61,127,255,.5);box-shadow:0 0 0 3px rgba(61,127,255,.08)}
+.lf input::placeholder{color:var(--t3)}
+.login-btn{width:100%;padding:12px;border-radius:9px;background:linear-gradient(135deg,#3D7FFF,#7C3AED);color:white;border:none;font-size:14px;font-weight:700;cursor:pointer;transition:all .2s;box-shadow:0 4px 16px rgba(61,127,255,.3);margin-bottom:14px}
+.login-btn:hover{transform:translateY(-1px);box-shadow:0 8px 24px rgba(61,127,255,.4)}
+.demo-chips{padding:0 32px 28px;display:flex;flex-wrap:wrap;gap:6px}
+.demo-chip{padding:4px 12px;border-radius:20px;font-size:11px;font-weight:600;border:1px solid var(--rim);background:var(--glass);color:var(--t2);cursor:pointer;transition:all .15s}
+.demo-chip:hover{border-color:var(--rim2);color:var(--t1)}
+
+/* ═══════════ APP SHELL ═══════════ */
+#s-app{flex-direction:row}
+.sidebar{width:240px;flex-shrink:0;background:var(--bg1);border-right:1px solid var(--rim);display:flex;flex-direction:column;position:fixed;left:0;top:0;bottom:0;z-index:300;overflow-y:auto;transition:background var(--trans),transform .28s cubic-bezier(.16,1,.3,1)}
+.sb-brand{padding:20px 16px 16px;border-bottom:1px solid var(--rim);display:flex;align-items:center;gap:10px}
+.sb-logo{width:34px;height:34px;border-radius:9px;flex-shrink:0;background:linear-gradient(135deg,#3D7FFF,#7C3AED);display:flex;align-items:center;justify-content:center;font-size:18px;box-shadow:0 4px 12px rgba(61,127,255,.3)}
+.sb-name{font-size:15px;font-weight:800;color:var(--t0)}
+.sb-ver{font-size:10px;color:var(--t3);margin-top:1px}
+.sb-nav{padding:10px 8px;flex:1}
+.sb-sec{font-size:9px;font-weight:700;letter-spacing:2px;text-transform:uppercase;color:var(--t3);padding:10px 8px 5px}
+.nav-item{display:flex;align-items:center;gap:9px;padding:9px 10px;border-radius:9px;font-size:13px;font-weight:500;color:var(--t2);cursor:pointer;transition:all .15s;border:1px solid transparent;margin-bottom:2px;position:relative}
+.nav-item:hover{background:var(--glass);color:var(--t1);border-color:var(--rim)}
+.nav-item.active{color:var(--t0);background:linear-gradient(135deg,rgba(61,127,255,.14),rgba(124,58,237,.08));border-color:rgba(61,127,255,.22)}
+.nav-item.active::before{content:'';position:absolute;left:0;top:25%;bottom:25%;width:2px;background:linear-gradient(180deg,#3D7FFF,#7C3AED);border-radius:0 2px 2px 0;box-shadow:0 0 6px rgba(61,127,255,.5)}
+.nav-item.active .ni-icon{color:#7BAEFF}
+.ni-icon{font-size:14px;width:18px;text-align:center;flex-shrink:0}
+.ni-label{flex:1}
+.ni-badge{font-size:10px;font-weight:700;padding:1px 6px;border-radius:20px;min-width:18px;text-align:center}
+.nb-blue{background:rgba(61,127,255,.18);color:#7BAEFF;border:1px solid rgba(61,127,255,.25)}
+.nb-red{background:rgba(255,69,96,.15);color:#FF8888;border:1px solid rgba(255,69,96,.22)}
+.nb-green{background:rgba(0,200,122,.12);color:#5DEBB0;border:1px solid rgba(0,200,122,.2)}
+.sector-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.role-badge{display:inline-flex;align-items:center;gap:5px;padding:2px 9px;border-radius:20px;font-size:10px;font-weight:700;letter-spacing:.3px;margin-top:3px}
+.rb-admin{background:rgba(61,127,255,.15);color:#7BAEFF;border:1px solid rgba(61,127,255,.25)}
+.rb-manager{background:rgba(0,200,122,.12);color:#5DEBB0;border:1px solid rgba(0,200,122,.2)}
+.rb-member{background:rgba(245,158,11,.12);color:#FCD060;border:1px solid rgba(245,158,11,.2)}
+.rb-viewer{background:rgba(168,85,247,.12);color:#C4AEFF;border:1px solid rgba(168,85,247,.2)}
+.sb-footer{padding:10px 8px 14px;border-top:1px solid var(--rim)}
+.sb-user{display:flex;align-items:center;gap:10px;padding:10px;border-radius:9px;cursor:pointer;transition:background .15s;border:1px solid transparent}
+.sb-user:hover{background:var(--glass);border-color:var(--rim)}
+.sb-avatar{width:32px;height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;color:white;flex-shrink:0}
+.sb-uname{font-size:13px;font-weight:600;color:var(--t0)}
+.theme-toggle{display:flex;background:var(--bg2);border:1px solid var(--rim);border-radius:8px;overflow:hidden;padding:3px;gap:3px;margin:0 8px 8px}
+.tt-btn{flex:1;padding:6px;font-size:11px;font-weight:700;text-align:center;cursor:pointer;border:none;background:transparent;color:var(--t2);border-radius:5px;transition:all .15s}
+.tt-btn.on{background:var(--bg4);color:var(--t0);box-shadow:0 1px 4px rgba(0,0,0,.2)}
+
+/* ═══════════ TOPBAR ═══════════ */
+.main-content{margin-left:240px;flex:1;min-width:0;display:flex;flex-direction:column}
+.topbar{position:sticky;top:0;z-index:200;height:54px;background:var(--bg1);border-bottom:1px solid var(--rim);display:flex;align-items:center;padding:0 24px;gap:12px;transition:background var(--trans)}
+.topbar-hamburger{display:none;width:32px;height:32px;background:var(--bg2);border:1px solid var(--rim);border-radius:7px;align-items:center;justify-content:center;font-size:16px;flex-shrink:0}
+.tb-title{font-size:15px;font-weight:700;flex:1;color:var(--t0)}
+.tb-search{display:flex;align-items:center;gap:8px;background:var(--bg2);border:1px solid var(--rim);border-radius:8px;padding:7px 12px;width:200px;transition:all .2s}
+.tb-search:focus-within{border-color:rgba(61,127,255,.4);width:240px}
+.tb-search input{background:none;border:none;outline:none;font-size:13px;color:var(--t1);width:100%}
+.tb-search input::placeholder{color:var(--t3)}
+.tb-ic{width:34px;height:34px;border-radius:8px;background:var(--bg2);border:1px solid var(--rim);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:15px;position:relative;transition:all .15s;flex-shrink:0}
+.tb-ic:hover{border-color:var(--rim2)}
+.notif-dot{position:absolute;top:7px;right:7px;width:6px;height:6px;border-radius:50%;background:#FF4560;border:1.5px solid var(--bg1);box-shadow:0 0 5px #FF4560}
+
+/* ═══════════ BUTTONS ═══════════ */
+.btn{display:inline-flex;align-items:center;gap:6px;padding:7px 14px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;transition:all .18s;border:1px solid;white-space:nowrap}
+.btn-primary{background:linear-gradient(135deg,#3D7FFF,#7C3AED);border-color:transparent;color:white;box-shadow:0 4px 14px rgba(61,127,255,.25)}
+.btn-primary:hover{transform:translateY(-1px);box-shadow:0 8px 22px rgba(61,127,255,.35)}
+.btn-ghost{background:var(--glass);border-color:var(--rim);color:var(--t2)}
+.btn-ghost:hover{border-color:var(--rim2);color:var(--t1);background:var(--glass2)}
+.btn-danger{background:rgba(255,69,96,.1);border-color:rgba(255,69,96,.3);color:#FF8080}
+.btn-danger:hover{background:rgba(255,69,96,.2)}
+.btn-success{background:rgba(0,200,122,.12);border-color:rgba(0,200,122,.3);color:#5DEBB0}
+.btn-success:hover{background:rgba(0,200,122,.2)}
+.btn-sm{padding:5px 10px;font-size:11px;border-radius:6px}
+.btn-xs{padding:3px 8px;font-size:10px;border-radius:5px}
+
+/* ═══════════ PAGES ═══════════ */
+.page{display:none;flex:1;padding:24px;animation:pg-in .25s ease both;overflow-y:auto}
+.page.active{display:block}
+@keyframes pg-in{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+
+/* ═══════════ KANBAN ═══════════ */
+.board-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:12px}
+.board-sector-badge{display:inline-flex;align-items:center;gap:6px;padding:5px 12px;border-radius:20px;font-size:12px;font-weight:700;border:1px solid}
+.kanban-scroll{overflow-x:auto;padding-bottom:8px}
+.kanban-board{display:flex;gap:14px;min-width:max-content;padding:4px}
+.kb-col{width:280px;flex-shrink:0;background:var(--bg2);border:1px solid var(--rim);border-radius:var(--radlg);display:flex;flex-direction:column;max-height:calc(100vh - 200px);transition:background var(--trans)}
+.kb-col-head{padding:14px 16px 10px;display:flex;align-items:center;gap:8px;flex-shrink:0}
+.kb-col-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.kb-col-name{font-size:13px;font-weight:700;color:var(--t0);flex:1}
+.kb-col-count{font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px;background:var(--glass2);color:var(--t2);border:1px solid var(--rim)}
+.wip-badge{font-size:10px;font-weight:700;padding:1px 7px;border-radius:20px;background:rgba(255,69,96,.1);color:#FF8080;border:1px solid rgba(255,69,96,.2)}
+.kb-cards{flex:1;overflow-y:auto;padding:0 8px 4px;display:flex;flex-direction:column;gap:8px}
+.kb-cards.dover{background:rgba(61,127,255,.04);border-radius:8px;outline:1px dashed rgba(61,127,255,.25)}
+.kb-card{background:var(--bg1);border:1px solid var(--rim);border-radius:var(--rad);padding:12px;cursor:grab;transition:all .2s;position:relative;animation:card-in .2s ease both}
+@keyframes card-in{from{opacity:0;transform:scale(.96)}to{opacity:1;transform:none}}
+.kb-card:hover{border-color:var(--rim2);box-shadow:var(--sh);transform:translateY(-2px)}
+.kb-card:active{cursor:grabbing}
+.kb-card.dragging{opacity:.3;transform:rotate(2deg)}
+.kb-card.locked{cursor:default}
+.kb-card-glow{position:absolute;top:-1px;left:10%;right:10%;height:1px;border-radius:1px}
+.kb-card-top{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:8px}
+.kb-card-title{font-size:13px;font-weight:600;color:var(--t0);line-height:1.35;flex:1;margin-right:8px}
+.kb-card-menu{width:22px;height:22px;border-radius:5px;display:flex;align-items:center;justify-content:center;font-size:14px;color:var(--t3);cursor:pointer;transition:all .12s;flex-shrink:0;opacity:0}
+.kb-card:hover .kb-card-menu{opacity:1}
+.kb-card-menu:hover{background:var(--bg3);color:var(--t1)}
+.kb-card-tags{display:flex;flex-wrap:wrap;gap:4px;margin-bottom:8px}
+.kb-tag{font-size:10px;font-weight:700;padding:2px 7px;border-radius:5px}
+.tag-urgent{background:rgba(255,69,96,.12);color:#FF8080;border:1px solid rgba(255,69,96,.2)}
+.tag-high{background:rgba(245,158,11,.12);color:#FCD060;border:1px solid rgba(245,158,11,.2)}
+.tag-mid{background:rgba(61,127,255,.12);color:#7BAEFF;border:1px solid rgba(61,127,255,.2)}
+.tag-low{background:rgba(107,114,128,.1);color:var(--t2);border:1px solid rgba(107,114,128,.15)}
+.tag-sector{border:1px solid}
+.kb-card-meta{display:flex;align-items:center;gap:8px;margin-bottom:8px;flex-wrap:wrap}
+.kb-meta{display:flex;align-items:center;gap:4px;font-size:11px;color:var(--t3)}
+.kb-meta.overdue{color:#FF8080}
+.kb-card-footer{display:flex;align-items:center;justify-content:space-between}
+.kb-assignees{display:flex}
+.kb-av{width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:800;color:white;border:2px solid var(--bg1);margin-left:-5px}
+.kb-av:first-child{margin-left:0}
+.kb-progress{height:3px;background:var(--bg3);border-radius:2px;overflow:hidden;margin-top:6px}
+.kb-progress-fill{height:100%;border-radius:2px;transition:width .3s}
+.kb-progress-pct{font-size:9px;color:var(--t3);text-align:right;margin-top:2px;font-family:var(--ffm)}
+.add-card-btn{width:100%;padding:7px;margin:0 8px 8px;width:calc(100% - 16px);border-radius:7px;background:transparent;border:1px dashed var(--rim);color:var(--t3);font-size:12px;font-weight:600;cursor:pointer;transition:all .15s;display:flex;align-items:center;justify-content:center;gap:5px}
+.add-card-btn:hover{border-color:var(--rim2);color:var(--t2);background:var(--glass)}
+.add-card-btn.locked{cursor:not-allowed;opacity:.4}
+.add-col-tile{width:280px;flex-shrink:0;background:var(--glass);border:1.5px dashed var(--rim);border-radius:var(--radlg);display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all .2s;font-size:13px;color:var(--t3);padding:20px;font-weight:600;gap:8px;min-height:120px}
+.add-col-tile:hover{border-color:var(--rim2);color:var(--t1);background:var(--glass2)}
+
+/* ═══════════ STATS ═══════════ */
+.stats-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:24px}
+.stat-card{background:var(--bg1);border:1px solid var(--rim);border-radius:var(--radlg);padding:18px;position:relative;overflow:hidden;cursor:pointer;transition:all .2s}
+.stat-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px}
+.stat-card:hover{border-color:var(--rim2);transform:translateY(-2px);box-shadow:var(--sh)}
+.sc-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+.sc-icon{width:34px;height:34px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:16px}
+.sc-delta{font-size:10px;font-weight:700;padding:2px 7px;border-radius:20px}
+.du{background:rgba(0,200,122,.12);color:#5DEBB0}
+.dd{background:rgba(255,69,96,.1);color:#FF8080}
+.sc-num{font-size:28px;font-weight:800;color:var(--t0);letter-spacing:-1px;line-height:1}
+.sc-label{font-size:11px;color:var(--t3);margin-top:5px}
+
+/* ═══════════ USERS TABLE ═══════════ */
+.data-table{width:100%;border-collapse:collapse}
+.data-table th{padding:10px 16px;font-size:10px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;color:var(--t3);border-bottom:1px solid var(--rim);text-align:left;background:linear-gradient(180deg,var(--bg2),var(--bg1))}
+.data-table td{padding:13px 16px;border-bottom:1px solid var(--rim);font-size:13px}
+.data-table tr:last-child td{border-bottom:none}
+.data-table tr:hover td{background:var(--glass)}
+.user-cell{display:flex;align-items:center;gap:10px}
+.user-av{width:30px;height:30px;border-radius:7px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;color:white}
+
+/* ═══════════ MODAL ═══════════ */
+.modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.75);backdrop-filter:blur(8px);z-index:500;align-items:center;justify-content:center;padding:20px}
+.modal-bg.open{display:flex}
+.modal{background:var(--bg1);border:1px solid var(--rim2);border-radius:var(--radxl);width:100%;max-width:520px;max-height:90vh;overflow-y:auto;box-shadow:0 32px 80px rgba(0,0,0,.7);animation:m-in .22s cubic-bezier(.16,1,.3,1) both;position:relative}
+.modal::before{content:'';position:absolute;top:0;left:20%;right:20%;height:1px;background:linear-gradient(90deg,transparent,rgba(61,127,255,.3),transparent)}
+.modal-lg{max-width:640px}
+@keyframes m-in{from{opacity:0;transform:translateY(14px) scale(.96)}to{opacity:1;transform:none}}
+.modal-head{padding:20px 24px;border-bottom:1px solid var(--rim);display:flex;align-items:center;justify-content:space-between}
+.modal-title{font-size:16px;font-weight:700;color:var(--t0)}
+.modal-close{width:28px;height:28px;border-radius:7px;background:var(--bg2);border:1px solid var(--rim);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:14px;color:var(--t2);transition:all .15s}
+.modal-close:hover{border-color:var(--rim2);color:var(--t1)}
+.modal-body{padding:24px}
+.modal-footer{padding:16px 24px;border-top:1px solid var(--rim);display:flex;justify-content:flex-end;gap:8px}
+.mf{display:flex;flex-direction:column;gap:6px;margin-bottom:14px}
+.mf label{font-size:10px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;color:var(--t2)}
+.mf input,.mf select,.mf textarea{background:var(--bg2);border:1px solid var(--rim);border-radius:8px;padding:10px 14px;font-size:13px;color:var(--t1);outline:none;transition:border-color .15s;width:100%}
+.mf input:focus,.mf select:focus,.mf textarea:focus{border-color:rgba(61,127,255,.5);box-shadow:0 0 0 3px rgba(61,127,255,.08)}
+.mf input::placeholder,.mf textarea::placeholder{color:var(--t3)}
+.mf select option{background:var(--bg2)}
+.mf textarea{resize:vertical;min-height:72px;line-height:1.6}
+.mf-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+
+/* ═══════════ WIZARD ═══════════ */
+.wizard-steps{display:flex;gap:0;margin-bottom:28px;position:relative}
+.wizard-steps::before{content:'';position:absolute;top:14px;left:14px;right:14px;height:1px;background:var(--rim);z-index:0}
+.wz-step{display:flex;flex-direction:column;align-items:center;gap:6px;flex:1;position:relative;z-index:1}
+.wz-dot{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:800;transition:all .3s;border:2px solid var(--rim);background:var(--bg2);color:var(--t3)}
+.wz-step.done .wz-dot{background:#00C87A;border-color:#00C87A;color:white}
+.wz-step.active .wz-dot{background:linear-gradient(135deg,#3D7FFF,#7C3AED);border-color:#3D7FFF;color:white;box-shadow:0 0 12px rgba(61,127,255,.4)}
+.wz-label{font-size:10px;font-weight:600;color:var(--t3);letter-spacing:.3px}
+.wz-step.active .wz-label{color:var(--t1)}
+.wz-step.done .wz-label{color:#5DEBB0}
+.wz-panel{display:none;animation:pg-in .2s ease both}
+.wz-panel.active{display:block}
+
+/* Icon picker */
+.icon-grid{display:flex;flex-wrap:wrap;gap:8px}
+.icon-opt{width:40px;height:40px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:20px;cursor:pointer;border:2px solid var(--rim);background:var(--glass);transition:all .15s}
+.icon-opt:hover{border-color:var(--rim2);background:var(--glass2)}
+.icon-opt.sel{border-color:#3D7FFF;background:rgba(61,127,255,.12);box-shadow:0 0 8px rgba(61,127,255,.3)}
+
+/* Color picker */
+.color-row{display:flex;flex-wrap:wrap;gap:8px}
+.color-swatch{width:32px;height:32px;border-radius:8px;cursor:pointer;border:3px solid transparent;transition:all .15s}
+.color-swatch:hover{transform:scale(1.1)}
+.color-swatch.sel{border-color:var(--t0);box-shadow:0 0 0 2px var(--bg1),0 0 0 4px rgba(255,255,255,.5)}
+
+/* Column chips in wizard */
+.col-chips{display:flex;flex-wrap:wrap;gap:6px;padding:10px;background:var(--bg2);border:1px solid var(--rim);border-radius:8px;min-height:48px}
+.col-chip{display:flex;align-items:center;gap:5px;padding:4px 10px;border-radius:6px;font-size:12px;font-weight:600;background:var(--bg3);border:1px solid var(--rim);color:var(--t1)}
+.col-chip-x{cursor:pointer;color:var(--t3);font-size:14px;line-height:1;transition:color .12s}
+.col-chip-x:hover{color:#FF8080}
+
+/* Member checkboxes */
+.member-list{display:flex;flex-direction:column;gap:8px;max-height:200px;overflow-y:auto}
+.member-item{display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--bg2);border:1px solid var(--rim);border-radius:9px;cursor:pointer;transition:border-color .15s}
+.member-item:hover{border-color:var(--rim2)}
+.member-item.sel{border-color:rgba(61,127,255,.4);background:rgba(61,127,255,.06)}
+.member-item input[type="checkbox"]{accent-color:#3D7FFF;width:15px;height:15px}
+
+/* Card detail */
+.card-detail-header{display:flex;align-items:flex-start;gap:12px;margin-bottom:20px}
+.cd-badge{padding:4px 11px;border-radius:6px;font-size:11px;font-weight:700;flex-shrink:0;margin-top:3px}
+.checklist-item{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--rim)}
+.checklist-item:last-child{border-bottom:none}
+.checklist-item input[type="checkbox"]{accent-color:#3D7FFF;width:15px;height:15px;cursor:pointer}
+.checklist-item label{font-size:13px;color:var(--t1);flex:1;cursor:pointer}
+.checklist-item label.done{text-decoration:line-through;color:var(--t3)}
+.comment-item{display:flex;gap:10px;margin-bottom:14px}
+.comment-av{width:28px;height:28px;border-radius:7px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:800;color:white}
+.comment-bubble{background:var(--bg2);border:1px solid var(--rim);border-radius:10px 10px 10px 2px;padding:10px 14px;flex:1}
+.comment-author{font-size:11px;font-weight:700;color:var(--t1);margin-bottom:4px}
+.comment-text{font-size:13px;color:var(--t2);line-height:1.5}
+.comment-time{font-size:10px;color:var(--t3);margin-top:4px;font-family:var(--ffm)}
+.log-item{display:flex;gap:10px;align-items:flex-start;padding:7px 0;border-bottom:1px solid rgba(255,255,255,.03)}
+.log-dot{width:6px;height:6px;border-radius:50%;background:var(--t3);flex-shrink:0;margin-top:5px}
+.log-text{font-size:12px;color:var(--t2);flex:1}
+.log-time{font-size:10px;color:var(--t3);font-family:var(--ffm);white-space:nowrap}
+
+/* Invite link */
+.invite-box{background:var(--bg2);border:1px solid var(--rim);border-radius:9px;padding:14px 16px;display:flex;align-items:center;gap:10px;margin-top:12px}
+.invite-link{flex:1;font-family:var(--ffm);font-size:11px;color:var(--t2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.invite-copy{padding:5px 10px;border-radius:6px;background:var(--glass2);border:1px solid var(--rim2);color:var(--t1);font-size:11px;font-weight:700;cursor:pointer;transition:all .15s}
+.invite-copy:hover{background:var(--glass3)}
+
+/* Perm gate */
+.perm-gate{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:320px;text-align:center;padding:40px}
+.pg-icon{font-size:48px;margin-bottom:16px;opacity:.4}
+.pg-title{font-size:18px;font-weight:700;color:var(--t0);margin-bottom:8px}
+.pg-sub{font-size:14px;color:var(--t2);max-width:380px;line-height:1.6}
+
+/* Notif */
+.notif-drawer{position:fixed;top:54px;right:0;width:340px;height:calc(100vh - 54px);background:var(--bg1);border-left:1px solid var(--rim);z-index:250;transform:translateX(110%);transition:transform .28s cubic-bezier(.16,1,.3,1);display:flex;flex-direction:column}
+.notif-drawer.open{transform:translateX(0);box-shadow:-16px 0 40px rgba(0,0,0,.4)}
+.nd-head{padding:16px 18px;border-bottom:1px solid var(--rim);display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
+.nd-list{flex:1;overflow-y:auto;padding:8px}
+.nd-item{display:flex;gap:10px;padding:11px;border-radius:9px;cursor:pointer;border:1px solid transparent;transition:all .12s;margin-bottom:2px}
+.nd-item:hover{background:var(--glass);border-color:var(--rim)}
+.nd-item.unread{background:rgba(61,127,255,.05);border-color:rgba(61,127,255,.1)}
+.nd-ic{width:32px;height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0}
+.nd-t{font-size:12px;font-weight:600;color:var(--t1);margin-bottom:2px}
+.nd-d{font-size:11px;color:var(--t2);line-height:1.4}
+.nd-time{font-size:10px;color:var(--t3);margin-top:3px;font-family:var(--ffm)}
+.nd-udot{width:6px;height:6px;border-radius:50%;background:#3D7FFF;flex-shrink:0;margin-top:5px;box-shadow:0 0 5px rgba(61,127,255,.5)}
+
+/* DB indicator */
+.db-indicator{display:flex;align-items:center;gap:6px;font-family:var(--ffm);font-size:10px;color:var(--t3);padding:4px 10px;background:var(--glass);border:1px solid var(--rim);border-radius:6px}
+.db-dot{width:5px;height:5px;border-radius:50%;background:#00C87A;box-shadow:0 0 5px #00C87A;animation:blink 2s ease infinite}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
+
+/* Toast */
+#toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(72px);background:var(--bg3);border:1px solid var(--rim2);border-radius:11px;padding:11px 18px;font-size:13px;font-weight:600;color:var(--t0);display:flex;align-items:center;gap:9px;box-shadow:0 16px 40px rgba(0,0,0,.5);z-index:600;transition:transform .35s cubic-bezier(.16,1,.3,1);pointer-events:none;white-space:nowrap}
+#toast.show{transform:translateX(-50%) translateY(0)}
+
+/* Responsive */
+@media(max-width:768px){
+  .sidebar{transform:translateX(-100%);width:250px}
+  .sidebar.mob-open{transform:translateX(0)}
+  .main-content{margin-left:0}
+  .topbar-hamburger{display:flex}
+  .tb-search{display:none}
+  .stats-grid{grid-template-columns:1fr 1fr}
+  .page{padding:16px}
+  .mf-row{grid-template-columns:1fr}
+}
+@media(max-width:480px){.stats-grid{grid-template-columns:1fr}}
+
+/* ═══════════ V3 ADDITIONS ═══════════ */
+
+/* Context menu */
+.ctx-menu{position:fixed;background:var(--bg1);border:1px solid var(--rim2);border-radius:var(--rad);padding:5px;min-width:170px;box-shadow:var(--sh-lg);z-index:800;animation:m-in .15s ease both}
+.ctx-item{display:flex;align-items:center;gap:9px;padding:9px 12px;border-radius:7px;font-size:13px;font-weight:500;color:var(--t1);cursor:pointer;transition:all .12s}
+.ctx-item:hover{background:var(--glass2)}
+.ctx-item.danger{color:#FF8080}
+.ctx-item.danger:hover{background:rgba(255,69,96,.1)}
+.ctx-sep{height:1px;background:var(--rim);margin:4px 0}
+
+/* Deadline badge on cards */
+.deadline-today{border-color:rgba(245,158,11,.4)!important;box-shadow:0 0 0 1px rgba(245,158,11,.2)!important}
+.deadline-overdue{border-color:rgba(255,69,96,.4)!important;box-shadow:0 0 0 1px rgba(255,69,96,.2)!important}
+.deadline-soon{border-color:rgba(61,127,255,.3)!important}
+.dl-badge{display:inline-flex;align-items:center;gap:4px;font-size:10px;font-weight:700;padding:2px 7px;border-radius:5px}
+.dl-today{background:rgba(245,158,11,.15);color:#FCD060;border:1px solid rgba(245,158,11,.25)}
+.dl-over{background:rgba(255,69,96,.12);color:#FF8080;border:1px solid rgba(255,69,96,.22)}
+.dl-soon{background:rgba(61,127,255,.12);color:#7BAEFF;border:1px solid rgba(61,127,255,.2)}
+.dl-ok{background:rgba(0,200,122,.1);color:#5DEBB0;border:1px solid rgba(0,200,122,.18)}
+
+/* Filter bar */
+.filter-bar{display:flex;align-items:center;gap:8px;padding:12px 0;flex-wrap:wrap;margin-bottom:16px;border-bottom:1px solid var(--rim)}
+.filter-group{display:flex;align-items:center;gap:5px}
+.filter-label{font-size:10px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;color:var(--t3)}
+.filter-chip{padding:5px 11px;border-radius:20px;font-size:12px;font-weight:600;border:1px solid var(--rim);background:transparent;color:var(--t2);cursor:pointer;transition:all .14s}
+.filter-chip.on{background:var(--bg3);border-color:var(--rim2);color:var(--t0)}
+.filter-chip:hover{border-color:var(--rim2);color:var(--t1)}
+.filter-search-wrap{flex:1;max-width:260px;display:flex;align-items:center;gap:8px;background:var(--bg2);border:1px solid var(--rim);border-radius:8px;padding:7px 12px}
+.filter-search-wrap input{background:none;border:none;outline:none;font-size:13px;color:var(--t1);width:100%}
+.filter-search-wrap input::placeholder{color:var(--t3)}
+.filter-clear{padding:5px 10px;border-radius:7px;font-size:11px;font-weight:700;background:var(--glass);border:1px solid var(--rim);color:var(--t2);cursor:pointer}
+.filter-clear:hover{border-color:var(--rim2);color:var(--t1)}
+.card-hidden{display:none!important}
+
+/* Archive page */
+.archive-empty{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:60px;text-align:center;color:var(--t3)}
+.archive-card{background:var(--bg1);border:1px solid var(--rim);border-radius:var(--rad);padding:14px;margin-bottom:8px;display:flex;align-items:center;gap:12px;opacity:.75;transition:all .15s}
+.archive-card:hover{opacity:1;border-color:var(--rim2)}
+
+/* Stats / Charts page */
+.chart-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px}
+.chart-card{background:var(--bg1);border:1px solid var(--rim);border-radius:var(--radlg);padding:20px}
+.chart-title{font-size:14px;font-weight:700;color:var(--t0);margin-bottom:4px}
+.chart-sub{font-size:12px;color:var(--t3);margin-bottom:16px}
+.chart-wrap{position:relative;height:220px}
+
+/* Sector edit modal inline fields */
+.sector-edit-row{display:flex;align-items:center;gap:12px;padding:12px;background:var(--bg2);border:1px solid var(--rim);border-radius:9px;margin-bottom:8px;transition:border-color .15s}
+.sector-edit-row:hover{border-color:var(--rim2)}
+
+/* Drag handle inside column */
+.drag-handle{cursor:grab;color:var(--t3);font-size:14px;padding:0 2px;opacity:0;transition:opacity .15s}
+.kb-card:hover .drag-handle{opacity:1}
+.kb-card:active .drag-handle{cursor:grabbing}
+.drop-placeholder{height:60px;border:2px dashed rgba(61,127,255,.3);border-radius:var(--rad);background:rgba(61,127,255,.04);margin-bottom:8px;transition:all .15s}
+</style>
+</head>
+<body>
+
+<!-- ═══════ LOGIN ═══════ -->
+<div class="screen active" id="s-login">
+  <div class="login-box">
+    <div class="login-head">
+      <div class="login-logo">📋</div>
+      <div class="login-title">FlowBoard</div>
+      <div class="login-sub">Çok Sektörlü Kanban · v3 · localStorage</div>
+    </div>
+    <div style="padding:0 32px 12px;font-size:11px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:var(--t3)">Rol Seçin</div>
+    <div class="role-grid">
+      <div class="role-card rc-admin sel" onclick="selRole('admin',this)">
+        <div class="rc-check">✓</div><span class="rc-icon">🛡️</span>
+        <div class="rc-name">Admin</div><div class="rc-desc">Tam yetki</div>
+      </div>
+      <div class="role-card rc-manager" onclick="selRole('manager',this)">
+        <div class="rc-check">✓</div><span class="rc-icon">👔</span>
+        <div class="rc-name">Manager</div><div class="rc-desc">Sektör yöneticisi</div>
+      </div>
+      <div class="role-card rc-member" onclick="selRole('member',this)">
+        <div class="rc-check">✓</div><span class="rc-icon">👤</span>
+        <div class="rc-name">Member</div><div class="rc-desc">Atanan kartlar</div>
+      </div>
+      <div class="role-card rc-viewer" onclick="selRole('viewer',this)">
+        <div class="rc-check">✓</div><span class="rc-icon">👁️</span>
+        <div class="rc-name">Viewer</div><div class="rc-desc">Sadece görüntüle</div>
+      </div>
+    </div>
+    <div class="login-fields">
+      <div class="lf"><label>E-posta</label><input id="le" value="admin@flowboard.io" placeholder="email..."></div>
+      <div class="lf"><label>Şifre</label><input type="password" id="lp" value="••••••••" placeholder="••••••••"></div>
+    </div>
+    <div style="padding:0 32px 14px"><button class="login-btn" onclick="doLogin()">Giriş Yap →</button></div>
+    <div style="padding:0 32px 6px;font-size:11px;color:var(--t3)">Hızlı Demo:</div>
+    <div class="demo-chips">
+      <span class="demo-chip" onclick="quickLogin('admin')">🛡️ Admin</span>
+      <span class="demo-chip" onclick="quickLogin('manager')">👔 Manager</span>
+      <span class="demo-chip" onclick="quickLogin('member')">👤 Member</span>
+      <span class="demo-chip" onclick="quickLogin('viewer')">👁️ Viewer</span>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════ APP ═══════ -->
+<div class="screen" id="s-app">
+  <aside class="sidebar" id="sidebar">
+    <div class="sb-brand">
+      <div class="sb-logo">📋</div>
+      <div><div class="sb-name">FlowBoard</div><div class="sb-ver">v3 · 6 Yeni Özellik</div></div>
+    </div>
+    <nav class="sb-nav" id="sidebarNav"></nav>
+    <div class="theme-toggle">
+      <button class="tt-btn on" id="darkBtn" onclick="setTheme('dark')">🌙 Koyu</button>
+      <button class="tt-btn" id="lightBtn" onclick="setTheme('light')">☀️ Açık</button>
+    </div>
+    <div class="sb-footer">
+      <div class="sb-user" onclick="logout()">
+        <div class="sb-avatar" id="sbAv"></div>
+        <div><div class="sb-uname" id="sbName">—</div><div class="sb-urole" id="sbRole"></div></div>
+      </div>
+    </div>
+  </aside>
+  <div style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);backdrop-filter:blur(4px);z-index:299" id="mobOv" onclick="closeSB()"></div>
+
+  <div class="main-content">
+    <header class="topbar">
+      <button class="topbar-hamburger" onclick="toggleSB()">☰</button>
+      <div class="tb-title" id="pgTitle">Dashboard</div>
+      <div class="tb-search"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--t3)" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg><input placeholder="Ara..." id="searchInput" oninput="doSearch(this.value)"></div>
+      <div class="db-indicator"><div class="db-dot"></div>localStorage</div>
+      <div class="tb-ic" onclick="toggleNotif()">🔔<div class="notif-dot"></div></div>
+      <div class="tb-ic" id="roleIc" style="font-size:11px;font-weight:800;color:#3D7FFF">ADM</div>
+      <button class="btn btn-primary btn-sm" id="topBtn" onclick="topAction()">+ Ekle</button>
+    </header>
+
+    <div style="flex:1;overflow-y:auto">
+      <div class="page active" id="p-dashboard"><div id="dashContent"></div></div>
+      <div class="page" id="p-boards"><div id="boardsContent"></div></div>
+      <div class="page" id="p-users"><div id="usersContent"></div></div>
+      <div class="page" id="p-archive"><div id="archiveContent"></div></div>
+      <div class="page" id="p-stats"><div id="statsContent"></div></div>
+      <div class="page" id="p-settings"><div id="settingsContent"></div></div>
+    </div>
+  </div>
+</div>
+
+<!-- Notif Drawer -->
+<div class="notif-drawer" id="notifD">
+  <div class="nd-head"><span style="font-size:14px;font-weight:700;color:var(--t0)">Bildirimler</span><span style="font-size:11px;color:#3D7FFF;cursor:pointer" onclick="toast('✓','Tümü okundu!')">Okundu say</span></div>
+  <div class="nd-list" id="notifList"></div>
+</div>
+
+<!-- ═══════ MODALS ═══════ -->
+
+<!-- Add Card -->
+<div class="modal-bg" id="m-addCard">
+  <div class="modal">
+    <div class="modal-head"><span class="modal-title">Yeni Kart</span><div class="modal-close" onclick="closeM('addCard')">✕</div></div>
+    <div class="modal-body">
+      <div class="mf"><label>Başlık *</label><input id="nc-title" placeholder="Kart başlığı..."></div>
+      <div class="mf"><label>Açıklama</label><textarea id="nc-desc" placeholder="Detaylar..."></textarea></div>
+      <div class="mf-row">
+        <div class="mf"><label>Öncelik</label>
+          <select id="nc-prio"><option value="urgent">🔴 Acil</option><option value="high">🟠 Yüksek</option><option value="mid" selected>🔵 Orta</option><option value="low">⚪ Düşük</option></select>
+        </div>
+        <div class="mf"><label>Son Tarih</label><input type="date" id="nc-date"></div>
+      </div>
+      <div class="mf"><label>Atanan Kişi</label><select id="nc-assign"><option value="">— Seçin —</option></select></div>
+      <div class="mf"><label>Sütun</label><select id="nc-col"><option value="">— Seçin —</option></select></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeM('addCard')">İptal</button>
+      <button class="btn btn-primary" onclick="submitCard()">Kart Ekle</button>
+    </div>
+  </div>
+</div>
+
+<!-- Add Column -->
+<div class="modal-bg" id="m-addCol">
+  <div class="modal">
+    <div class="modal-head"><span class="modal-title">Yeni Sütun</span><div class="modal-close" onclick="closeM('addCol')">✕</div></div>
+    <div class="modal-body">
+      <div class="mf"><label>Sütun Adı *</label><input id="cc-name" placeholder="Örn: Test Aşaması"></div>
+      <div class="mf-row">
+        <div class="mf"><label>Renk</label>
+          <select id="cc-color">
+            <option value="#6B7280">Gri</option><option value="#3D7FFF">Mavi</option><option value="#00C87A">Yeşil</option>
+            <option value="#F59E0B">Sarı</option><option value="#FF4560">Kırmızı</option><option value="#A855F7">Mor</option><option value="#F97316">Turuncu</option>
+          </select>
+        </div>
+        <div class="mf"><label>WIP Limiti</label><input type="number" id="cc-wip" placeholder="Sınırsız" min="1"></div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeM('addCol')">İptal</button>
+      <button class="btn btn-primary" onclick="submitCol()">Sütun Ekle</button>
+    </div>
+  </div>
+</div>
+
+<!-- Add User Modal -->
+<div class="modal-bg" id="m-addUser">
+  <div class="modal modal-lg">
+    <div class="modal-head"><span class="modal-title">Kullanıcı Ekle / Davet Et</span><div class="modal-close" onclick="closeM('addUser')">✕</div></div>
+    <div class="modal-body">
+      <div class="mf-row">
+        <div class="mf"><label>Ad Soyad *</label><input id="uu-name" placeholder="Örn: Ayşe Kaya"></div>
+        <div class="mf"><label>E-posta *</label><input type="email" id="uu-email" placeholder="ayse@sirket.com"></div>
+      </div>
+      <div class="mf-row">
+        <div class="mf"><label>Rol *</label>
+          <select id="uu-role">
+            <option value="manager">👔 Manager</option>
+            <option value="member">👤 Member</option>
+            <option value="viewer">👁️ Viewer</option>
+          </select>
+        </div>
+        <div class="mf"><label>Avatar Rengi</label>
+          <select id="uu-color">
+            <option value="#3D7FFF">Mavi</option><option value="#00C87A">Yeşil</option><option value="#A855F7">Mor</option>
+            <option value="#F59E0B">Sarı</option><option value="#F97316">Turuncu</option><option value="#FF4560">Kırmızı</option><option value="#06B6D4">Teal</option>
+          </select>
+        </div>
+      </div>
+      <div class="mf"><label>Sektör Erişimleri</label><div id="uu-sectors" style="display:flex;flex-wrap:wrap;gap:7px;padding:10px;background:var(--bg2);border:1px solid var(--rim);border-radius:8px"></div></div>
+      <div style="padding-top:16px;border-top:1px solid var(--rim)">
+        <div style="font-size:12px;font-weight:700;color:var(--t2);margin-bottom:8px">📧 Davet Linki (simülasyon)</div>
+        <div class="invite-box">
+          <div class="invite-link" id="inviteLink">https://flowboard.app/invite/abc123xyz</div>
+          <button class="invite-copy" onclick="copyInvite()">Kopyala</button>
+        </div>
+        <div style="font-size:11px;color:var(--t3);margin-top:6px">Gerçek uygulamada e-posta ile gönderilir.</div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeM('addUser')">İptal</button>
+      <button class="btn btn-success btn-sm" onclick="sendInvite()">📧 Davet Gönder</button>
+      <button class="btn btn-primary" onclick="submitUser()">✓ Kullanıcı Ekle</button>
+    </div>
+  </div>
+</div>
+
+<!-- Sector Wizard -->
+<div class="modal-bg" id="m-addSector">
+  <div class="modal modal-lg">
+    <div class="modal-head">
+      <span class="modal-title">Yeni Sektör Board — <span id="wz-title-label">Adım 1/4</span></span>
+      <div class="modal-close" onclick="closeM('addSector')">✕</div>
+    </div>
+    <div class="modal-body">
+      <!-- Wizard steps indicator -->
+      <div class="wizard-steps">
+        <div class="wz-step active" id="wz-s1"><div class="wz-dot">1</div><div class="wz-label">İsim & İkon</div></div>
+        <div class="wz-step" id="wz-s2"><div class="wz-dot">2</div><div class="wz-label">Renk</div></div>
+        <div class="wz-step" id="wz-s3"><div class="wz-dot">3</div><div class="wz-label">Sütunlar</div></div>
+        <div class="wz-step" id="wz-s4"><div class="wz-dot">4</div><div class="wz-label">Üyeler</div></div>
+      </div>
+
+      <!-- Step 1: Name & Icon -->
+      <div class="wz-panel active" id="wz-p1">
+        <div class="mf"><label>Sektör Adı *</label><input id="ws-name" placeholder="Örn: Müşteri Hizmetleri"></div>
+        <div class="mf"><label>Kısa Kod (maks 5 harf)</label><input id="ws-short" placeholder="Örn: CS" maxlength="5" style="text-transform:uppercase" oninput="this.value=this.value.toUpperCase()"></div>
+        <div class="mf">
+          <label>İkon Seçin</label>
+          <div class="icon-grid" id="iconGrid"></div>
+        </div>
+      </div>
+
+      <!-- Step 2: Color -->
+      <div class="wz-panel" id="wz-p2">
+        <div class="mf">
+          <label>Sektör Rengi Seçin</label>
+          <div class="color-row" id="colorGrid"></div>
+        </div>
+        <div style="margin-top:20px;padding:20px;border-radius:var(--radlg);border:1px solid var(--rim);background:var(--bg2)">
+          <div style="font-size:11px;color:var(--t3);margin-bottom:10px">Önizleme</div>
+          <div id="sector-preview" style="display:flex;align-items:center;gap:12px">
+            <div id="prev-icon" style="width:44px;height:44px;border-radius:11px;display:flex;align-items:center;justify-content:center;font-size:22px"></div>
+            <div>
+              <div id="prev-name" style="font-size:15px;font-weight:700;color:var(--t0)">—</div>
+              <div id="prev-badge" style="display:inline-flex;align-items:center;gap:5px;padding:2px 9px;border-radius:20px;font-size:10px;font-weight:700;margin-top:3px">Board</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Step 3: Columns -->
+      <div class="wz-panel" id="wz-p3">
+        <div style="margin-bottom:14px">
+          <div style="font-size:13px;color:var(--t2);margin-bottom:12px">Varsayılan sütunlar otomatik eklendi. Özel sütun ekleyebilirsiniz.</div>
+          <div class="col-chips" id="wz-cols"></div>
+        </div>
+        <div style="display:flex;gap:8px">
+          <input id="new-col-input" placeholder="Yeni sütun adı..." style="flex:1;background:var(--bg2);border:1px solid var(--rim);border-radius:8px;padding:9px 13px;font-size:13px;color:var(--t1);outline:none">
+          <button class="btn btn-ghost btn-sm" onclick="addWizardCol()">+ Ekle</button>
+        </div>
+        <div style="margin-top:12px;font-size:11px;color:var(--t3)">💡 İpucu: En az 2 sütun olmalı. Sürükle & bırak sonradan yapılabilir.</div>
+      </div>
+
+      <!-- Step 4: Members -->
+      <div class="wz-panel" id="wz-p4">
+        <div style="font-size:13px;color:var(--t2);margin-bottom:14px">Bu board'a kimlerin erişeceğini seçin. Admin her zaman erişebilir.</div>
+        <div class="member-list" id="wz-members"></div>
+        <div style="margin-top:12px;font-size:11px;color:var(--t3)">💡 Sonradan Kullanıcı Yönetimi'nden değiştirilebilir.</div>
+      </div>
+    </div>
+
+    <div class="modal-footer">
+      <button class="btn btn-ghost" id="wz-back-btn" onclick="wizardBack()" style="display:none">← Geri</button>
+      <button class="btn btn-ghost" onclick="closeM('addSector')">İptal</button>
+      <button class="btn btn-primary" id="wz-next-btn" onclick="wizardNext()">Devam →</button>
+    </div>
+  </div>
+</div>
+
+<!-- Card Detail -->
+<div class="modal-bg" id="m-cardDetail">
+  <div class="modal modal-lg">
+    <div class="modal-head"><span class="modal-title" id="cd-head">Kart Detayı</span><div class="modal-close" onclick="closeM('cardDetail')">✕</div></div>
+    <div class="modal-body">
+      <div class="card-detail-header">
+        <div class="cd-badge" id="cd-badge"></div>
+        <div style="flex:1">
+          <div id="cd-title" style="font-size:18px;font-weight:700;color:var(--t0);margin-bottom:6px"></div>
+          <div id="cd-meta-row" style="display:flex;gap:12px;flex-wrap:wrap;font-size:12px;color:var(--t2)"></div>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 210px;gap:20px">
+        <div>
+          <div style="font-size:11px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;color:var(--t2);margin-bottom:8px">AÇIKLAMA</div>
+          <div id="cd-desc" style="font-size:13px;color:var(--t2);line-height:1.65;padding:12px;background:var(--bg2);border-radius:8px;margin-bottom:16px"></div>
+          <div style="font-size:11px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;color:var(--t2);margin-bottom:10px">ALT GÖREVLER</div>
+          <div id="cd-checks" style="margin-bottom:14px"></div>
+          <div style="display:flex;gap:8px;margin-bottom:20px">
+            <input id="new-ck" placeholder="Alt görev ekle..." style="flex:1;background:var(--bg2);border:1px solid var(--rim);border-radius:7px;padding:8px 12px;font-size:13px;color:var(--t1);outline:none">
+            <button class="btn btn-ghost btn-sm" onclick="addCheck()">+ Ekle</button>
+          </div>
+          <div style="font-size:11px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;color:var(--t2);margin-bottom:10px">YORUMLAR</div>
+          <div id="cd-comments" style="margin-bottom:12px"></div>
+          <div style="display:flex;gap:8px">
+            <input id="new-comment" placeholder="Yorum yaz..." style="flex:1;background:var(--bg2);border:1px solid var(--rim);border-radius:7px;padding:8px 12px;font-size:13px;color:var(--t1);outline:none">
+            <button class="btn btn-primary btn-sm" onclick="addComment()">Gönder</button>
+          </div>
+        </div>
+        <div>
+          <div style="font-size:11px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;color:var(--t2);margin-bottom:10px">DETAYLAR</div>
+          <div id="cd-details" style="display:flex;flex-direction:column;gap:8px;margin-bottom:16px"></div>
+          <div style="font-size:11px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;color:var(--t2);margin-bottom:8px">GEÇMİŞ</div>
+          <div id="cd-log"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="toast"><span id="tIc">✅</span> <span id="tMsg"></span></div>
+
+<!-- Context Menu -->
+<div id="ctxMenu" class="ctx-menu" style="display:none">
+  <div class="ctx-item" id="ctx-edit" onclick="ctxEdit()">✏️ Düzenle / Detay</div>
+  <div class="ctx-item" id="ctx-archive" onclick="ctxArchive()">📦 Arşivle</div>
+  <div class="ctx-sep"></div>
+  <div class="ctx-item danger" id="ctx-delete" onclick="ctxDelete()">🗑️ Sil</div>
+</div>
+
+<!-- Edit Sector Modal -->
+<div class="modal-bg" id="m-editSector">
+  <div class="modal">
+    <div class="modal-head"><span class="modal-title">Sektörü Düzenle</span><div class="modal-close" onclick="closeM('editSector')">✕</div></div>
+    <div class="modal-body">
+      <div class="mf"><label>Sektör Adı</label><input id="es-name" placeholder="Sektör adı"></div>
+      <div class="mf-row">
+        <div class="mf"><label>İkon</label><input id="es-icon" placeholder="💼" style="font-size:20px;text-align:center"></div>
+        <div class="mf"><label>Kısa Kod</label><input id="es-short" placeholder="TECH" maxlength="5" oninput="this.value=this.value.toUpperCase()"></div>
+      </div>
+      <div class="mf"><label>Renk</label>
+        <div class="color-row" id="es-color-row"></div>
+      </div>
+      <div style="padding-top:16px;border-top:1px solid var(--rim)">
+        <button class="btn btn-danger btn-sm" onclick="deleteSector()">🗑️ Bu Sektörü Sil</button>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeM('editSector')">İptal</button>
+      <button class="btn btn-primary" onclick="saveEditSector()">Kaydet</button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ══════════════════════════════════════════════
+   DATABASE — localStorage
+══════════════════════════════════════════════ */
+const DB_KEY = 'flowboard_v3';
+
+function dbLoad() {
+  try {
+    const raw = localStorage.getItem(DB_KEY);
+    if (raw) return JSON.parse(raw);
+  } catch(e) {}
+  return null;
+}
+
+function dbSave(data) {
+  try { localStorage.setItem(DB_KEY, JSON.stringify(data)); } catch(e) {}
+}
+
+function dbReset() {
+  localStorage.removeItem(DB_KEY);
+  return initDB();
+}
+
+function initDB() {
+  const sectors = {
+    tech:  { id:'tech',  name:'Yazılım / Teknoloji', icon:'💻', color:'#3D7FFF', short:'TECH',  members:['u1','u2','u4'] },
+    sales: { id:'sales', name:'Satış & CRM',          icon:'💼', color:'#00C87A', short:'SALES', members:['u1','u3'] },
+    hr:    { id:'hr',    name:'HR & İşe Alım',        icon:'👥', color:'#A855F7', short:'HR',    members:['u1','u3'] },
+    mkt:   { id:'mkt',   name:'Pazarlama',             icon:'📢', color:'#F59E0B', short:'MKT',   members:['u1','u2','u6'] },
+    fin:   { id:'fin',   name:'Finans & Muhasebe',     icon:'💰', color:'#06B6D4', short:'FIN',   members:['u1','u5','u6'] },
+    ops:   { id:'ops',   name:'Operasyon & Lojistik',  icon:'🚚', color:'#F97316', short:'OPS',   members:['u1','u5'] },
+  };
+  const users = [
+    { id:'u1', name:'Ahmet Yılmaz',   email:'ahmet@co.com',   role:'admin',   av:'AY', color:'#3D7FFF', sectors:['tech','sales','hr','mkt','fin','ops'] },
+    { id:'u2', name:'Fatma Demir',    email:'fatma@co.com',   role:'manager', av:'FD', color:'#00C87A', sectors:['tech','mkt'] },
+    { id:'u3', name:'Mehmet Kaya',    email:'mehmet@co.com',  role:'manager', av:'MK', color:'#A855F7', sectors:['sales','hr'] },
+    { id:'u4', name:'Zeynep Arslan',  email:'zeynep@co.com',  role:'member',  av:'ZA', color:'#F59E0B', sectors:['tech'] },
+    { id:'u5', name:'Emre Koç',       email:'emre@co.com',    role:'member',  av:'EK', color:'#F97316', sectors:['ops','fin'] },
+    { id:'u6', name:'Selin Yıldız',   email:'selin@co.com',   role:'viewer',  av:'SY', color:'#06B6D4', sectors:['mkt','fin'] },
+  ];
+  const colDefs = (sKey) => [
+    { id:`${sKey}-backlog`, name:'Backlog',        color:'#6B7280', wip:null },
+    { id:`${sKey}-todo`,    name:'Yapılacak',      color:sectors[sKey].color, wip:5 },
+    { id:`${sKey}-doing`,   name:'Devam Ediyor',   color:'#F59E0B', wip:3 },
+    { id:`${sKey}-review`,  name:'Gözden Geçirme', color:'#A855F7', wip:null },
+    { id:`${sKey}-done`,    name:'Tamamlandı',     color:'#00C87A', wip:null },
+  ];
+  const boards = {};
+  Object.keys(sectors).forEach(sKey => {
+    boards[sKey] = { cols: colDefs(sKey), cards: generateCards(sKey, sectors[sKey]) };
+  });
+
+  const data = { sectors, users, boards, archive: [] };
+  dbSave(data);
+  return data;
+}
+
+function generateCards(sKey, s) {
+  const templates = {
+    tech:  [['API Entegrasyonu','u4','mid','2026-03-25',['Endpoint tasarımı','Test yazımı'],['u4'],'todo'],['Dashboard Yeniden Tasarımı','u2','high','2026-03-30',['Wireframe','UI geliştirme'],['u2'],'doing'],['CI/CD Pipeline Kurulumu','u1','urgent','2026-03-20',['Docker','GitHub Actions'],['u1','u4'],'doing'],['Performans Optimizasyonu','u4','low',null,[],['u4'],'backlog']],
+    sales: [['Q1 Kampanya Planı','u3','high','2026-03-28',['Hedef kitle','Bütçe'],['u3'],'todo'],['CRM Veri Temizliği','u3','mid',null,[],['u3'],'backlog'],['Müşteri Demo Görüşmeleri','u2','urgent','2026-03-22',['5 demo planlandı'],['u2','u3'],'doing']],
+    hr:    [['Frontend Developer İlanı','u3','urgent','2026-03-21',['JD yazıldı','İlan yayınlandı'],['u3'],'doing'],['Onboarding Süreci Tasarımı','u1','high','2026-04-05',['Checklist','Süreç haritası'],['u1'],'todo'],['Performans Değerlendirme','u3','mid',null,[],['u3'],'backlog']],
+    mkt:   [['Blog İçerik Takvimi','u2','mid','2026-03-31',['10 konu belirlendi'],['u2'],'doing'],['Sosyal Medya Stratejisi','u6','high','2026-03-25',['Platform analizi'],['u6','u2'],'todo'],['SEO Optimizasyonu','u2','mid',null,[],['u2'],'backlog']],
+    fin:   [['Q1 Bütçe Raporu','u1','urgent','2026-03-31',['Veri toplama','Analiz'],['u1','u5'],'doing'],['Fatura Takip Sistemi','u5','high','2026-04-10',['Gereksinimler'],['u5'],'todo'],['Vergi Beyannamesi','u1','mid','2026-04-15',[],['u1'],'backlog']],
+    ops:   [['Depo Yönetim Sistemi','u5','high','2026-04-01',['Analiz','Kurulum'],['u5','u1'],'doing'],['Teslimat Süreci Optimizasyonu','u5','mid',null,[],['u5'],'todo'],['Tedarik Zinciri Audit','u1','urgent','2026-03-25',['Süreç haritası'],['u1','u5'],'doing']],
+  };
+  return (templates[sKey]||[]).map((t,i) => ({
+    id:`${sKey}-card-${i+1}`,
+    title:t[0], assignedTo:t[1], prio:t[2], date:t[3]||null,
+    desc:`${s.name} sektöründe ${t[0].toLowerCase()} görevi.`,
+    checklist:t[4].map((c,j)=>({id:`ck-${sKey}-${i}-${j}`,text:c,done:j===0&&i<2})),
+    comments:i===0?[{av:t[5][0]||'AY',text:'Başladım, ilerleyişi paylaşacağım.',time:'2 saat önce'}]:[],
+    log:[{text:'Kart oluşturuldu',time:'3 gün önce'},{text:'Durumu güncellendi',time:'2 gün önce'}],
+    assignees:t[5], color:s.color, sector:sKey,
+    col:`${sKey}-${t[6]}`,
+  }));
+}
+
+/* ══════════════════════════════════════════════
+   STATE
+══════════════════════════════════════════════ */
+let DB = dbLoad() || dbReset();
+let currentRole = 'admin';
+let selLoginRole = 'admin';
+let currentPage = 'dashboard';
+let currentSectorKey = null;
+let addingCardSector = null;
+let addingCardCol = null;
+let addingColSector = null;
+let activeCard = null; // {cardId, sKey}
+
+const ROLES = {
+  admin:   { name:'Admin',   badge:'rb-admin',   color:'#3D7FFF', ind:'ADM', can:{ all:true, addCard:true, moveCard:true, addCol:true, editCard:true, manageUsers:true, addSector:true } },
+  manager: { name:'Manager', badge:'rb-manager', color:'#00C87A', ind:'MGR', can:{ addCard:true, moveCard:true, addCol:true, editCard:true } },
+  member:  { name:'Member',  badge:'rb-member',  color:'#F59E0B', ind:'MBR', can:{ editCard:true } },
+  viewer:  { name:'Viewer',  badge:'rb-viewer',  color:'#A855F7', ind:'VWR', can:{} },
+};
+
+/* ══════════════════════════════════════════════
+   LOGIN
+══════════════════════════════════════════════ */
+function selRole(role, el) {
+  selLoginRole = role;
+  document.querySelectorAll('.role-card').forEach(c=>c.classList.remove('sel'));
+  el.classList.add('sel');
+}
+function doLogin() {
+  currentRole = selLoginRole;
+  initApp();
+  document.getElementById('s-login').classList.remove('active');
+  document.getElementById('s-app').classList.add('active');
+}
+function quickLogin(role) {
+  selLoginRole = role;
+  document.querySelectorAll('.role-card').forEach(c=>c.classList.remove('sel'));
+  document.querySelector('.rc-'+role)?.classList.add('sel');
+  doLogin();
+}
+function logout() {
+  document.getElementById('s-app').classList.remove('active');
+  document.getElementById('s-login').classList.add('active');
+}
+
+/* ══════════════════════════════════════════════
+   INIT APP
+══════════════════════════════════════════════ */
+function initApp() {
+  const role = ROLES[currentRole];
+  const user = getCurrentUser();
+  document.getElementById('roleIc').textContent = role.ind;
+  document.getElementById('roleIc').style.color = role.color;
+  const av = document.getElementById('sbAv');
+  av.textContent = user.av;
+  av.style.background = user.color;
+  document.getElementById('sbName').textContent = user.name;
+  document.getElementById('sbRole').innerHTML = `<span class="role-badge ${role.badge}">${role.name}</span>`;
+  buildSidebar();
+  buildNotifs();
+  goPage('dashboard');
+}
+
+function getCurrentUser() {
+  return DB.users.find(u=>u.role===currentRole) || DB.users[0];
+}
+function getAccessibleSectors() {
+  if(currentRole==='admin') return Object.keys(DB.sectors);
+  const u = getCurrentUser();
+  return u.sectors.filter(s => DB.sectors[s]);
+}
+function can(perm) { return !!(ROLES[currentRole].can.all || ROLES[currentRole].can[perm]); }
+
+/* ══════════════════════════════════════════════
+   SIDEBAR
+══════════════════════════════════════════════ */
+function buildSidebar() {
+  const accessible = getAccessibleSectors();
+  let html = `<div class="sb-sec">Genel</div>`;
+  html += navItem('dashboard','◈','Dashboard','');
+  html += navItem('stats','📊','İstatistikler & Grafikler','');
+  html += navItem('archive','📦','Arşiv',`<span class="ni-badge nb-red">${(DB.archive||[]).length||''}</span>`);
+  if(can('manageUsers')) html += navItem('users','👤','Kullanıcılar',`<span class="ni-badge nb-blue">${DB.users.length}</span>`);
+  html += navItem('settings','⚙️','Ayarlar','');
+  html += `<div class="sb-sec">Sektör Board'ları
+    ${can('addSector') ? `<span onclick="openAddSector()" style="float:right;cursor:pointer;font-size:16px;color:var(--t3);transition:color .15s;margin-right:4px" title="Sektör Ekle" onmouseover="this.style.color='var(--t1)'" onmouseout="this.style.color='var(--t3)'">+</span>` : ''}
+  </div>`;
+  accessible.forEach(sKey => {
+    const s = DB.sectors[sKey];
+    if(!s) return;
+    const count = DB.boards[sKey]?.cards?.length || 0;
+    html += `<div class="nav-item" id="nav-board-${sKey}">
+      <span class="sector-dot" style="background:${s.color};box-shadow:0 0 5px ${s.color}88" onclick="goPage('board-${sKey}')"></span>
+      <span class="ni-label" onclick="goPage('board-${sKey}')" style="flex:1">${s.icon} ${s.name}</span>
+      <span class="ni-badge nb-blue" onclick="goPage('board-${sKey}')">${count}</span>
+      ${can('addSector') ? `<span onclick="openEditSector('${sKey}')" style="font-size:12px;color:var(--t3);cursor:pointer;padding:2px 4px;border-radius:4px;margin-left:2px;transition:all .12s" onmouseover="this.style.color='var(--t1)';this.style.background='var(--glass2)'" onmouseout="this.style.color='var(--t3)';this.style.background=''" title="Düzenle">✏️</span>` : ''}
+    </div>`;
+  });
+  document.getElementById('sidebarNav').innerHTML = html;
+}
+function navItem(id, icon, label, badge) {
+  return `<div class="nav-item" id="nav-${id}" onclick="goPage('${id}')">
+    <span class="ni-icon">${icon}</span><span class="ni-label">${label}</span>${badge}
+  </div>`;
+}
+
+/* ══════════════════════════════════════════════
+   NAVIGATION
+══════════════════════════════════════════════ */
+const TITLES = {
+  dashboard:'Dashboard', boards:'Tüm Board\'lar', users:'Kullanıcı Yönetimi',
+  settings:'Ayarlar', archive:'Arşiv', stats:'İstatistikler & Grafikler',
+};
+
+function goPage(id) {
+  currentPage = id;
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+  if(document.getElementById('notifD').classList.contains('open')) toggleNotif();
+
+  if(id.startsWith('board-')) {
+    const sKey = id.replace('board-','');
+    currentSectorKey = sKey;
+    const s = DB.sectors[sKey];
+    if(!s) { goPage('dashboard'); return; }
+    // Reuse the boards page for each board
+    document.getElementById('p-boards').classList.add('active');
+    document.getElementById('nav-board-'+sKey)?.classList.add('active');
+    document.getElementById('pgTitle').textContent = `${s.icon} ${s.name}`;
+    renderBoard(sKey);
+    const tb = document.getElementById('topBtn');
+    tb.style.display = can('addCard') ? 'inline-flex' : 'none';
+    tb.textContent = '+ Kart';
+  } else {
+    const pg = document.getElementById('p-'+id);
+    if(pg) pg.classList.add('active');
+    document.getElementById('nav-'+id)?.classList.add('active');
+    document.getElementById('pgTitle').textContent = TITLES[id] || id;
+    const tb = document.getElementById('topBtn');
+    if(id==='users') {
+      tb.style.display = can('manageUsers') ? 'inline-flex' : 'none';
+      tb.textContent = '+ Kullanıcı';
+      renderUsers();
+    } else if(id==='dashboard') {
+      tb.style.display = 'inline-flex';
+      tb.textContent = '+ Hızlı Ekle';
+      renderDashboard();
+    } else if(id==='archive') {
+      tb.style.display = 'none';
+      renderArchive();
+    } else if(id==='stats') {
+      tb.style.display = 'none';
+      renderStats();
+    } else if(id==='settings') {
+      tb.style.display = 'none';
+      renderSettings();
+    } else {
+      tb.style.display = 'none';
+    }
+  }
+  if(window.innerWidth<=768) closeSB();
+}
+
+function topAction() {
+  if(currentPage.startsWith('board-')) openAddCard(currentSectorKey, null);
+  else if(currentPage==='users') openM('addUser');
+  else if(currentPage==='dashboard') openAddCard(getAccessibleSectors()[0], null);
+}
+
+/* ══════════════════════════════════════════════
+   DASHBOARD
+══════════════════════════════════════════════ */
+function renderDashboard() {
+  const accessible = getAccessibleSectors();
+  let totalCards=0, urgentCards=0, doneCards=0;
+  accessible.forEach(sKey => {
+    const b = DB.boards[sKey];
+    if(!b) return;
+    totalCards += b.cards.length;
+    urgentCards += b.cards.filter(c=>c.prio==='urgent').length;
+    doneCards += b.cards.filter(c=>c.col.endsWith('-done')).length;
+  });
+
+  let statsHtml = `
+    <div class="stat-card" style="border-top:2px solid #3D7FFF" onclick="goPage('dashboard')">
+      <div class="sc-top"><div class="sc-icon" style="background:rgba(61,127,255,.15)">📊</div><span class="sc-delta du">Toplam</span></div>
+      <div class="sc-num">${totalCards}</div><div class="sc-label">Tüm Kartlar</div>
+    </div>
+    <div class="stat-card" style="border-top:2px solid #00C87A">
+      <div class="sc-top"><div class="sc-icon" style="background:rgba(0,200,122,.12)">✅</div></div>
+      <div class="sc-num">${doneCards}</div><div class="sc-label">Tamamlandı</div>
+    </div>
+    <div class="stat-card" style="border-top:2px solid #FF4560">
+      <div class="sc-top"><div class="sc-icon" style="background:rgba(255,69,96,.1)">🔴</div></div>
+      <div class="sc-num">${urgentCards}</div><div class="sc-label">Acil</div>
+    </div>
+    <div class="stat-card" style="border-top:2px solid #A855F7">
+      <div class="sc-top"><div class="sc-icon" style="background:rgba(168,85,247,.12)">👥</div></div>
+      <div class="sc-num">${DB.users.length}</div><div class="sc-label">Kullanıcılar</div>
+    </div>`;
+
+  accessible.forEach(sKey => {
+    const s = DB.sectors[sKey];
+    const b = DB.boards[sKey];
+    if(!s||!b) return;
+    statsHtml += `<div class="stat-card" style="border-top:2px solid ${s.color}" onclick="goPage('board-${sKey}')">
+      <div class="sc-top"><div class="sc-icon" style="background:${s.color}20">${s.icon}</div><span class="sc-delta du">${b.cards.length} kart</span></div>
+      <div class="sc-num">${b.cards.length}</div><div class="sc-label">${s.name}</div>
+    </div>`;
+  });
+
+  const myCards = [];
+  accessible.forEach(sKey => {
+    const b = DB.boards[sKey];
+    if(!b) return;
+    b.cards.filter(c=>!c.col.endsWith('-done')).slice(0,2).forEach(c=>myCards.push({...c,sKey}));
+  });
+
+  const pMap = {urgent:'🔴',high:'🟠',mid:'🔵',low:'⚪'};
+  document.getElementById('dashContent').innerHTML = `
+    <div class="stats-grid" style="grid-template-columns:repeat(auto-fill,minmax(160px,1fr))">${statsHtml}</div>
+    <div style="display:grid;grid-template-columns:1.6fr 1fr;gap:16px">
+      <div style="background:var(--bg1);border:1px solid var(--rim);border-radius:var(--radlg);overflow:hidden">
+        <div style="padding:16px 20px;border-bottom:1px solid var(--rim);display:flex;align-items:center;justify-content:space-between">
+          <span style="font-size:14px;font-weight:700;color:var(--t0)">Sektör Board'ları</span>
+          ${can('addSector') ? `<button class="btn btn-primary btn-sm" onclick="openAddSector()">+ Sektör Ekle</button>` : ''}
+        </div>
+        <div style="padding:12px 16px;display:flex;flex-direction:column;gap:10px">
+          ${accessible.map(sKey=>{
+            const s=DB.sectors[sKey];const b=DB.boards[sKey];if(!s||!b)return'';
+            const done=b.cards.filter(c=>c.col.endsWith('-done')).length;
+            const pct=b.cards.length?Math.round(done/b.cards.length*100):0;
+            return `<div style="display:flex;align-items:center;gap:12px;padding:10px;background:var(--bg2);border:1px solid var(--rim);border-radius:9px;cursor:pointer;transition:border-color .15s" onclick="goPage('board-${sKey}')" onmouseover="this.style.borderColor='var(--rim2)'" onmouseout="this.style.borderColor='var(--rim)'">
+              <span style="font-size:22px">${s.icon}</span>
+              <div style="flex:1">
+                <div style="font-size:13px;font-weight:700;color:var(--t0);margin-bottom:4px">${s.name}</div>
+                <div style="height:4px;background:var(--bg3);border-radius:2px;overflow:hidden"><div style="width:${pct}%;height:100%;background:${s.color};border-radius:2px;transition:width .5s"></div></div>
+              </div>
+              <div style="text-align:right"><div style="font-size:13px;font-weight:700;color:var(--t0)">${b.cards.length}</div><div style="font-size:10px;color:var(--t3)">kart</div></div>
+            </div>`;
+          }).join('')}
+        </div>
+      </div>
+      <div style="background:var(--bg1);border:1px solid var(--rim);border-radius:var(--radlg);overflow:hidden">
+        <div style="padding:16px 20px;border-bottom:1px solid var(--rim)"><span style="font-size:14px;font-weight:700;color:var(--t0)">Benim Kartlarım</span></div>
+        <div style="padding:8px">
+          ${myCards.slice(0,6).map(c=>{
+            const s=DB.sectors[c.sKey];if(!s)return'';
+            return `<div style="padding:10px;background:var(--bg2);border:1px solid var(--rim);border-radius:9px;margin-bottom:7px;cursor:pointer;transition:all .15s" onclick="openCardDetail('${c.id}','${c.sKey}')" onmouseover="this.style.borderColor='var(--rim2)'" onmouseout="this.style.borderColor='var(--rim)'">
+              <div style="display:flex;align-items:center;gap:7px;margin-bottom:4px">
+                <span style="font-size:11px;color:${s.color};font-weight:700">${s.icon} ${s.name}</span>
+                <span style="margin-left:auto">${pMap[c.prio]||'🔵'}</span>
+              </div>
+              <div style="font-size:13px;font-weight:600;color:var(--t0)">${c.title}</div>
+            </div>`;
+          }).join('') || '<div style="text-align:center;padding:24px;font-size:13px;color:var(--t3)">✅ Tüm görevler tamamlandı!</div>'}
+        </div>
+      </div>
+    </div>`;
+}
+
+/* ══════════════════════════════════════════════
+   RENDER BOARD  (v3 — filters + deadline + ctx)
+══════════════════════════════════════════════ */
+let boardFilter = { prio:'all', assign:'all', search:'' };
+
+function renderBoard(sKey) {
+  const s = DB.sectors[sKey];
+  const board = DB.boards[sKey];
+  if(!s || !board) return;
+
+  const urgentCount = board.cards.filter(c=>c.prio==='urgent').length;
+  const overdue = board.cards.filter(c=>c.date && new Date(c.date)<new Date() && !c.col.endsWith('-done')).length;
+  const boardEl = document.getElementById('boardsContent');
+
+  // Build assignee filter options
+  const memberIds = [...new Set(board.cards.flatMap(c=>c.assignees))];
+  const memberOpts = memberIds.map(uid=>{
+    const u=DB.users.find(x=>x.id===uid);
+    return u ? `<button class="filter-chip ${boardFilter.assign===uid?'on':''}" onclick="setBoardFilter('assign','${uid}')">${u.av}</button>` : '';
+  }).join('');
+
+  boardEl.innerHTML = `
+    <div class="board-header">
+      <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+        <span class="board-sector-badge" style="background:${s.color}15;color:${s.color};border-color:${s.color}30">${s.icon} ${s.name}</span>
+        <span style="font-size:12px;color:var(--t2)">${board.cards.length} kart</span>
+        ${urgentCount ? `<span class="ni-badge nb-red">🔴 ${urgentCount} Acil</span>` : ''}
+        ${overdue ? `<span class="ni-badge nb-red">⏰ ${overdue} Gecikmiş</span>` : ''}
+      </div>
+      <div style="display:flex;gap:8px">
+        ${can('addCol') ? `<button class="btn btn-ghost btn-sm" onclick="openAddCol('${sKey}')">+ Sütun</button>` : ''}
+        ${can('addCard') ? `<button class="btn btn-primary btn-sm" onclick="openAddCard('${sKey}',null)">+ Kart Ekle</button>` : ''}
+      </div>
+    </div>
+
+    <!-- FILTER BAR -->
+    <div class="filter-bar">
+      <div class="filter-search-wrap">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--t3)" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+        <input placeholder="Kart ara..." id="board-search-${sKey}" value="${boardFilter.search}"
+          oninput="setBoardFilter('search',this.value)">
+      </div>
+      <div class="filter-group">
+        <span class="filter-label">Öncelik</span>
+        <button class="filter-chip ${boardFilter.prio==='all'?'on':''}" onclick="setBoardFilter('prio','all')">Tümü</button>
+        <button class="filter-chip ${boardFilter.prio==='urgent'?'on':''}" onclick="setBoardFilter('prio','urgent')">🔴</button>
+        <button class="filter-chip ${boardFilter.prio==='high'?'on':''}" onclick="setBoardFilter('prio','high')">🟠</button>
+        <button class="filter-chip ${boardFilter.prio==='mid'?'on':''}" onclick="setBoardFilter('prio','mid')">🔵</button>
+        <button class="filter-chip ${boardFilter.prio==='low'?'on':''}" onclick="setBoardFilter('prio','low')">⚪</button>
+      </div>
+      ${memberOpts ? `<div class="filter-group"><span class="filter-label">Kişi</span>
+        <button class="filter-chip ${boardFilter.assign==='all'?'on':''}" onclick="setBoardFilter('assign','all')">Tümü</button>
+        ${memberOpts}
+      </div>` : ''}
+      ${(boardFilter.prio!=='all'||boardFilter.assign!=='all'||boardFilter.search) ?
+        `<button class="filter-clear" onclick="clearBoardFilter()">✕ Temizle</button>` : ''}
+    </div>
+
+    <div class="kanban-scroll"><div class="kanban-board" id="kb-${sKey}"></div></div>`;
+
+  const kbEl = document.getElementById(`kb-${sKey}`);
+  board.cols.forEach(col => {
+    const colCards = board.cards.filter(c=>c.col===col.id);
+    const isOverWip = col.wip && colCards.length >= col.wip;
+    const colEl = document.createElement('div');
+    colEl.className = 'kb-col';
+    colEl.innerHTML = `
+      <div class="kb-col-head">
+        <div class="kb-col-dot" style="background:${col.color};box-shadow:0 0 6px ${col.color}88"></div>
+        <div class="kb-col-name">${col.name}</div>
+        <div class="kb-col-count">${colCards.length}${col.wip?'/'+col.wip:''}</div>
+        ${isOverWip ? '<span class="wip-badge">WIP!</span>' : ''}
+      </div>
+      <div class="kb-cards" id="kbc-${col.id}"
+        ondragover="onDragOver(event,'${col.id}')"
+        ondragleave="event.currentTarget.classList.remove('dover')"
+        ondrop="onDrop(event,'${col.id}','${sKey}')">
+      </div>
+      ${can('addCard') ? `<button class="add-card-btn" onclick="openAddCard('${sKey}','${col.id}')">＋ Kart ekle</button>` : ''}`;
+    kbEl.appendChild(colEl);
+    colCards.forEach(card => {
+      const el = buildCardEl(card, sKey);
+      // Apply filter visibility
+      if(!cardMatchesFilter(card)) el.classList.add('card-hidden');
+      document.getElementById(`kbc-${col.id}`)?.appendChild(el);
+    });
+  });
+
+  if(can('addCol')) {
+    const addEl = document.createElement('div');
+    addEl.className = 'add-col-tile';
+    addEl.onclick = () => openAddCol(sKey);
+    addEl.innerHTML = '＋ Sütun Ekle';
+    kbEl.appendChild(addEl);
+  }
+}
+
+/* Deadline helpers */
+function getDeadlineClass(date, isDone) {
+  if(!date || isDone) return '';
+  const now = new Date(); now.setHours(0,0,0,0);
+  const d = new Date(date); d.setHours(0,0,0,0);
+  const diff = Math.floor((d-now)/(1000*60*60*24));
+  if(diff < 0) return 'deadline-overdue';
+  if(diff === 0) return 'deadline-today';
+  if(diff <= 3) return 'deadline-soon';
+  return '';
+}
+function getDeadlineBadge(date, isDone) {
+  if(!date || isDone) return '';
+  const now = new Date(); now.setHours(0,0,0,0);
+  const d = new Date(date); d.setHours(0,0,0,0);
+  const diff = Math.floor((d-now)/(1000*60*60*24));
+  const str = d.toLocaleDateString('tr-TR',{day:'numeric',month:'short'});
+  if(diff < 0) return `<span class="dl-badge dl-over">⏰ ${str} · ${Math.abs(diff)}g gecikti</span>`;
+  if(diff === 0) return `<span class="dl-badge dl-today">🔔 Bugün</span>`;
+  if(diff <= 3) return `<span class="dl-badge dl-soon">📅 ${str} · ${diff}g kaldı</span>`;
+  return `<span class="dl-badge dl-ok">📅 ${str}</span>`;
+}
+
+function buildCardEl(card, sKey) {
+  const s = DB.sectors[sKey];
+  const pClass = {urgent:'tag-urgent',high:'tag-high',mid:'tag-mid',low:'tag-low'};
+  const pLabel = {urgent:'Acil',high:'Yüksek',mid:'Orta',low:'Düşük'};
+  const doneChecks = card.checklist.filter(c=>c.done).length;
+  const pct = card.checklist.length ? Math.round(doneChecks/card.checklist.length*100) : 0;
+  const isDone = card.col.endsWith('-done');
+  const dlClass = getDeadlineClass(card.date, isDone);
+  const dlBadge = getDeadlineBadge(card.date, isDone);
+
+  const el = document.createElement('div');
+  el.className = `kb-card ${can('moveCard')?'':'locked'} ${dlClass}`;
+  el.id = `card-${card.id}`;
+  el.draggable = can('moveCard');
+  if(can('moveCard')) {
+    el.ondragstart = e => onDragStart(e, card.id, sKey);
+    el.ondragend = () => el.classList.remove('dragging');
+  }
+  // Right-click context menu
+  el.addEventListener('contextmenu', e => {
+    e.preventDefault();
+    showCtxMenu(e, card.id, sKey);
+  });
+
+  el.innerHTML = `
+    <div class="kb-card-glow" style="background:linear-gradient(90deg,transparent,${card.color}40,transparent)"></div>
+    <div class="kb-card-top">
+      <div class="kb-card-title">${card.title}</div>
+      <div class="kb-card-menu" onclick="event.stopPropagation();showCtxMenu(event,'${card.id}','${sKey}')">⋯</div>
+    </div>
+    <div class="kb-card-tags">
+      <span class="kb-tag ${pClass[card.prio]}">${pLabel[card.prio]}</span>
+      <span class="kb-tag tag-sector" style="background:${s.color}15;color:${s.color};border-color:${s.color}30">${s.short}</span>
+    </div>
+    ${dlBadge ? `<div style="margin-bottom:8px">${dlBadge}</div>` : ''}
+    <div class="kb-card-meta">
+      ${card.comments.length ? `<div class="kb-meta">💬 ${card.comments.length}</div>` : ''}
+      ${card.checklist.length ? `<div class="kb-meta">☑️ ${doneChecks}/${card.checklist.length}</div>` : ''}
+    </div>
+    ${card.checklist.length ? `<div class="kb-progress"><div class="kb-progress-fill" style="width:${pct}%;background:${s.color}"></div></div><div class="kb-progress-pct">${pct}%</div>` : ''}
+    <div class="kb-card-footer">
+      <div class="kb-assignees">
+        ${card.assignees.map(uid=>{const u=DB.users.find(x=>x.id===uid);return u?`<div class="kb-av" style="background:${u.color}" title="${u.name}">${u.av}</div>`:''}).join('')}
+      </div>
+    </div>`;
+  el.addEventListener('click', e => {
+    if(!e.target.classList.contains('kb-card-menu')) openCardDetail(card.id, sKey);
+  });
+  return el;
+}
+
+/* ══════════════════════════════════════════════
+   DRAG & DROP  (v3 — column + cross-column)
+══════════════════════════════════════════════ */
+let dragCardId=null, dragCardSector=null;
+function onDragStart(e,id,sKey) {
+  dragCardId=id; dragCardSector=sKey;
+  setTimeout(()=>document.getElementById(`card-${id}`)?.classList.add('dragging'),0);
+  e.dataTransfer.effectAllowed='move';
+}
+function onDragOver(e,colId) {
+  e.preventDefault(); e.dataTransfer.dropEffect='move';
+  document.getElementById(`kbc-${colId}`)?.classList.add('dover');
+}
+function onDrop(e,colId,sKey) {
+  e.preventDefault();
+  document.getElementById(`kbc-${colId}`)?.classList.remove('dover');
+  if(!dragCardId||!dragCardSector) return;
+  const card = DB.boards[dragCardSector]?.cards.find(c=>c.id===dragCardId);
+  if(!card||card.col===colId) return;
+  const oldCol = card.col;
+  card.col=colId;
+  card.log.unshift({text:`${currentRole} kartı taşıdı → ${colId.split('-').pop()}`,time:'Şimdi'});
+  dbSave(DB);
+  renderBoard(dragCardSector);
+  buildSidebar();
+  toast('✓',`"${card.title}" taşındı`);
+  dragCardId=null; dragCardSector=null;
+}
+
+/* ══════════════════════════════════════════════
+   FILTER  (v3)
+══════════════════════════════════════════════ */
+function setBoardFilter(key, val) {
+  boardFilter[key] = val;
+  if(currentSectorKey) renderBoard(currentSectorKey);
+}
+function clearBoardFilter() {
+  boardFilter = {prio:'all', assign:'all', search:''};
+  if(currentSectorKey) renderBoard(currentSectorKey);
+}
+function cardMatchesFilter(card) {
+  if(boardFilter.prio !== 'all' && card.prio !== boardFilter.prio) return false;
+  if(boardFilter.assign !== 'all' && !card.assignees.includes(boardFilter.assign)) return false;
+  if(boardFilter.search && !card.title.toLowerCase().includes(boardFilter.search.toLowerCase())) return false;
+  return true;
+}
+
+/* ══════════════════════════════════════════════
+   CONTEXT MENU  (v3)
+══════════════════════════════════════════════ */
+let ctxCardId=null, ctxSKey=null;
+function showCtxMenu(e, cardId, sKey) {
+  e.preventDefault();
+  e.stopPropagation();
+  ctxCardId=cardId; ctxSKey=sKey;
+  const menu = document.getElementById('ctxMenu');
+  menu.style.display='block';
+  let x=e.clientX, y=e.clientY;
+  if(x+180>window.innerWidth) x=window.innerWidth-190;
+  if(y+140>window.innerHeight) y=window.innerHeight-150;
+  menu.style.left=x+'px'; menu.style.top=y+'px';
+}
+function hideCtxMenu() { document.getElementById('ctxMenu').style.display='none'; ctxCardId=null; ctxSKey=null; }
+function ctxEdit() { if(ctxCardId&&ctxSKey) openCardDetail(ctxCardId,ctxSKey); hideCtxMenu(); }
+function ctxArchive() {
+  if(!ctxCardId||!ctxSKey) return;
+  const board = DB.boards[ctxSKey];
+  const idx = board.cards.findIndex(c=>c.id===ctxCardId);
+  if(idx===-1) return;
+  const card = board.cards.splice(idx,1)[0];
+  card.archivedAt = new Date().toISOString();
+  card.archivedSector = ctxSKey;
+  if(!DB.archive) DB.archive=[];
+  DB.archive.push(card);
+  dbSave(DB);
+  renderBoard(ctxSKey); buildSidebar();
+  toast('📦',`"${card.title}" arşivlendi`);
+  hideCtxMenu();
+}
+function ctxDelete() {
+  if(!ctxCardId||!ctxSKey) return;
+  const card = DB.boards[ctxSKey]?.cards.find(c=>c.id===ctxCardId);
+  if(!card) return;
+  if(!confirm(`"${card.title}" kalıcı olarak silinsin mi?`)) { hideCtxMenu(); return; }
+  DB.boards[ctxSKey].cards = DB.boards[ctxSKey].cards.filter(c=>c.id!==ctxCardId);
+  dbSave(DB); renderBoard(ctxSKey); buildSidebar();
+  toast('🗑️',`"${card.title}" silindi`);
+  hideCtxMenu();
+}
+document.addEventListener('click', ()=>hideCtxMenu());
+document.addEventListener('keydown', e=>{ if(e.key==='Escape') hideCtxMenu(); });
+
+/* ══════════════════════════════════════════════
+   ARCHIVE PAGE  (v3)
+══════════════════════════════════════════════ */
+function renderArchive() {
+  const archive = DB.archive || [];
+  const el = document.getElementById('archiveContent');
+  if(!archive.length) {
+    el.innerHTML=`<div class="archive-empty"><div style="font-size:48px;margin-bottom:12px">📦</div><div style="font-size:16px;font-weight:700;color:var(--t0);margin-bottom:6px">Arşiv Boş</div><div style="font-size:13px">Sağ tık → Arşivle ile kartları buraya taşıyabilirsin.</div></div>`;
+    return;
+  }
+  el.innerHTML = `
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">
+      <div><div style="font-size:20px;font-weight:800;color:var(--t0)">${archive.length} Arşivlenmiş Kart</div></div>
+      <button class="btn btn-danger btn-sm" onclick="clearArchive()">🗑️ Arşivi Temizle</button>
+    </div>
+    <div>
+      ${archive.map((card,i)=>{
+        const s=DB.sectors[card.archivedSector]||{icon:'📦',name:'Bilinmiyor',color:'#6B7280'};
+        const pMap={urgent:'🔴',high:'🟠',mid:'🔵',low:'⚪'};
+        const date=card.archivedAt?new Date(card.archivedAt).toLocaleDateString('tr-TR',{day:'numeric',month:'short',year:'numeric'}):'—';
+        return `<div class="archive-card">
+          <span style="font-size:22px">${s.icon}</span>
+          <div style="flex:1">
+            <div style="font-size:13px;font-weight:700;color:var(--t0);margin-bottom:3px">${card.title}</div>
+            <div style="font-size:11px;color:var(--t2)">${s.name} · ${pMap[card.prio]||'⚪'} · Arşivlenme: ${date}</div>
+          </div>
+          <div style="display:flex;gap:6px">
+            <button class="btn btn-ghost btn-xs" onclick="restoreCard(${i})">↩ Geri Al</button>
+            <button class="btn btn-danger btn-xs" onclick="deleteFromArchive(${i})">🗑️</button>
+          </div>
+        </div>`;
+      }).join('')}
+    </div>`;
+}
+function restoreCard(i) {
+  const card = (DB.archive||[])[i];
+  if(!card) return;
+  const sKey = card.archivedSector;
+  if(!DB.boards[sKey]) { toast('⚠️','Sektör artık mevcut değil'); return; }
+  delete card.archivedAt; delete card.archivedSector;
+  // put back in backlog col
+  card.col = DB.boards[sKey].cols[0].id;
+  DB.boards[sKey].cards.push(card);
+  DB.archive.splice(i,1);
+  dbSave(DB); buildSidebar(); renderArchive();
+  toast('↩',`"${card.title}" geri alındı`);
+}
+function deleteFromArchive(i) {
+  const card=(DB.archive||[])[i];if(!card)return;
+  if(!confirm(`"${card.title}" kalıcı silinsin mi?`))return;
+  DB.archive.splice(i,1); dbSave(DB); renderArchive(); buildSidebar();
+  toast('🗑️','Kalıcı silindi');
+}
+function clearArchive() {
+  if(!confirm('Tüm arşiv silinsin mi? Geri alınamaz!'))return;
+  DB.archive=[]; dbSave(DB); renderArchive(); buildSidebar();
+  toast('🗑️','Arşiv temizlendi');
+}
+
+/* ══════════════════════════════════════════════
+   STATS / CHARTS PAGE  (v3 — Chart.js)
+══════════════════════════════════════════════ */
+let chartInstances = {};
+function destroyCharts() {
+  Object.values(chartInstances).forEach(c=>{ try{c.destroy();}catch(e){} });
+  chartInstances={};
+}
+function renderStats() {
+  destroyCharts();
+  const accessible = getAccessibleSectors();
+  const el = document.getElementById('statsContent');
+
+  // Aggregate data
+  const sectorTotals={}, sectorDone={}, prioCount={urgent:0,high:0,mid:0,low:0};
+  let totalOverdue=0;
+  accessible.forEach(sKey=>{
+    const b=DB.boards[sKey]; if(!b)return;
+    sectorTotals[sKey]=b.cards.length;
+    sectorDone[sKey]=b.cards.filter(c=>c.col.endsWith('-done')).length;
+    b.cards.forEach(c=>{
+      if(prioCount[c.prio]!==undefined) prioCount[c.prio]++;
+      if(c.date&&new Date(c.date)<new Date()&&!c.col.endsWith('-done')) totalOverdue++;
+    });
+  });
+
+  el.innerHTML = `
+    <div style="margin-bottom:20px">
+      <div style="font-size:20px;font-weight:800;color:var(--t0);margin-bottom:4px">İstatistikler & Grafikler</div>
+      <div style="font-size:13px;color:var(--t2)">Tüm sektörlerin performans özeti</div>
+    </div>
+    <div class="stats-grid" style="grid-template-columns:repeat(4,1fr);margin-bottom:20px">
+      <div class="stat-card" style="border-top:2px solid #3D7FFF">
+        <div class="sc-top"><div class="sc-icon" style="background:rgba(61,127,255,.15)">📊</div></div>
+        <div class="sc-num">${Object.values(sectorTotals).reduce((a,b)=>a+b,0)}</div><div class="sc-label">Toplam Kart</div>
+      </div>
+      <div class="stat-card" style="border-top:2px solid #00C87A">
+        <div class="sc-top"><div class="sc-icon" style="background:rgba(0,200,122,.12)">✅</div></div>
+        <div class="sc-num">${Object.values(sectorDone).reduce((a,b)=>a+b,0)}</div><div class="sc-label">Tamamlandı</div>
+      </div>
+      <div class="stat-card" style="border-top:2px solid #FF4560">
+        <div class="sc-top"><div class="sc-icon" style="background:rgba(255,69,96,.1)">⏰</div></div>
+        <div class="sc-num">${totalOverdue}</div><div class="sc-label">Gecikmiş</div>
+      </div>
+      <div class="stat-card" style="border-top:2px solid #A855F7">
+        <div class="sc-top"><div class="sc-icon" style="background:rgba(168,85,247,.12)">📦</div></div>
+        <div class="sc-num">${(DB.archive||[]).length}</div><div class="sc-label">Arşivlenmiş</div>
+      </div>
+    </div>
+    <div class="chart-grid">
+      <div class="chart-card">
+        <div class="chart-title">Sektör Başına Kart</div>
+        <div class="chart-sub">Toplam vs Tamamlanan</div>
+        <div class="chart-wrap"><canvas id="chart-sector"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-title">Öncelik Dağılımı</div>
+        <div class="chart-sub">Tüm aktif kartlar</div>
+        <div class="chart-wrap"><canvas id="chart-prio"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-title">Tamamlanma Oranı</div>
+        <div class="chart-sub">Sektör bazında %</div>
+        <div class="chart-wrap"><canvas id="chart-completion"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-title">Kullanıcı Yükü</div>
+        <div class="chart-sub">Kişi başına kart sayısı</div>
+        <div class="chart-wrap"><canvas id="chart-users"></canvas></div>
+      </div>
+    </div>`;
+
+  // Render charts after DOM update
+  requestAnimationFrame(()=>{
+    const isDark = document.documentElement.getAttribute('data-theme')==='dark';
+    const gridColor = isDark ? 'rgba(255,255,255,.06)' : 'rgba(0,0,0,.06)';
+    const txtColor = isDark ? '#7A85A3' : '#5A6080';
+    Chart.defaults.color = txtColor;
+
+    const names = accessible.map(k=>DB.sectors[k].name.split(' ')[0]);
+    const colors = accessible.map(k=>DB.sectors[k].color);
+
+    // Bar: sector totals vs done
+    chartInstances['sector'] = new Chart(document.getElementById('chart-sector'), {
+      type:'bar',
+      data:{
+        labels:names,
+        datasets:[
+          {label:'Toplam',data:accessible.map(k=>sectorTotals[k]),backgroundColor:colors.map(c=>c+'55'),borderColor:colors,borderWidth:2,borderRadius:6},
+          {label:'Tamamlanan',data:accessible.map(k=>sectorDone[k]),backgroundColor:colors.map(c=>c+'99'),borderColor:colors,borderWidth:2,borderRadius:6},
+        ]
+      },
+      options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{labels:{color:txtColor}}},scales:{x:{grid:{color:gridColor},ticks:{color:txtColor}},y:{grid:{color:gridColor},ticks:{color:txtColor}}}}
+    });
+
+    // Doughnut: priority
+    chartInstances['prio'] = new Chart(document.getElementById('chart-prio'), {
+      type:'doughnut',
+      data:{
+        labels:['Acil','Yüksek','Orta','Düşük'],
+        datasets:[{data:[prioCount.urgent,prioCount.high,prioCount.mid,prioCount.low],backgroundColor:['#FF456088','#F59E0B88','#3D7FFF88','#6B728088'],borderColor:['#FF4560','#F59E0B','#3D7FFF','#6B7280'],borderWidth:2}]
+      },
+      options:{responsive:true,maintainAspectRatio:false,cutout:'65%',plugins:{legend:{position:'right',labels:{color:txtColor,padding:14}}}}
+    });
+
+    // Bar: completion %
+    const pcts = accessible.map(k=>sectorTotals[k]?Math.round(sectorDone[k]/sectorTotals[k]*100):0);
+    chartInstances['comp'] = new Chart(document.getElementById('chart-completion'), {
+      type:'bar',
+      data:{labels:names,datasets:[{label:'Tamamlanma %',data:pcts,backgroundColor:pcts.map(p=>p>=80?'#00C87A88':p>=50?'#F59E0B88':'#FF456088'),borderColor:pcts.map(p=>p>=80?'#00C87A':p>=50?'#F59E0B':'#FF4560'),borderWidth:2,borderRadius:6}]},
+      options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{grid:{color:gridColor},ticks:{color:txtColor}},y:{max:100,grid:{color:gridColor},ticks:{color:txtColor,callback:v=>v+'%'}}}}
+    });
+
+    // Bar: user load
+    const userLoad={};
+    accessible.forEach(k=>DB.boards[k]?.cards.filter(c=>!c.col.endsWith('-done')).forEach(c=>c.assignees.forEach(uid=>{userLoad[uid]=(userLoad[uid]||0)+1;})));
+    const uids=Object.keys(userLoad);
+    chartInstances['users'] = new Chart(document.getElementById('chart-users'), {
+      type:'bar',
+      data:{labels:uids.map(uid=>DB.users.find(u=>u.id===uid)?.av||uid),datasets:[{label:'Aktif Kart',data:uids.map(uid=>userLoad[uid]),backgroundColor:uids.map(uid=>(DB.users.find(u=>u.id===uid)?.color||'#6B7280')+'88'),borderColor:uids.map(uid=>DB.users.find(u=>u.id===uid)?.color||'#6B7280'),borderWidth:2,borderRadius:6}]},
+      options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{grid:{color:gridColor},ticks:{color:txtColor}},y:{grid:{color:gridColor},ticks:{color:txtColor}}}}
+    });
+  });
+}
+
+/* ══════════════════════════════════════════════
+   EDIT / DELETE SECTOR  (v3)
+══════════════════════════════════════════════ */
+let editingSectorKey = null;
+const EDIT_COLORS = ['#3D7FFF','#7C3AED','#00C87A','#F59E0B','#FF4560','#F97316','#06B6D4','#EC4899','#10B981','#8B5CF6','#EF4444','#14B8A6'];
+function openEditSector(sKey) {
+  editingSectorKey = sKey;
+  const s = DB.sectors[sKey];
+  document.getElementById('es-name').value = s.name;
+  document.getElementById('es-icon').value = s.icon;
+  document.getElementById('es-short').value = s.short;
+  document.getElementById('es-color-row').innerHTML = EDIT_COLORS.map(c=>
+    `<div class="color-swatch ${c===s.color?'sel':''}" style="background:${c}" data-c="${c}" onclick="esSelColor('${c}',this)"></div>`
+  ).join('');
+  openM('editSector');
+}
+function esSelColor(c, el) {
+  document.querySelectorAll('#es-color-row .color-swatch').forEach(e=>e.classList.remove('sel'));
+  el.classList.add('sel');
+}
+function saveEditSector() {
+  const sKey = editingSectorKey;
+  const s = DB.sectors[sKey];
+  s.name = document.getElementById('es-name').value.trim() || s.name;
+  s.icon = document.getElementById('es-icon').value.trim() || s.icon;
+  s.short = document.getElementById('es-short').value.trim().toUpperCase() || s.short;
+  const selColor = document.querySelector('#es-color-row .color-swatch.sel');
+  if(selColor) s.color = selColor.dataset.c;
+  dbSave(DB); buildSidebar();
+  if(currentSectorKey===sKey) renderBoard(sKey);
+  if(currentPage==='dashboard') renderDashboard();
+  closeM('editSector');
+  toast('✅',`"${s.name}" güncellendi`);
+}
+function deleteSector() {
+  const sKey = editingSectorKey;
+  const s = DB.sectors[sKey];
+  if(!confirm(`"${s.name}" sektörü ve tüm kartları silinsin mi? Bu işlem geri alınamaz!`)) return;
+  delete DB.sectors[sKey];
+  delete DB.boards[sKey];
+  DB.users.forEach(u=>{ u.sectors=u.sectors.filter(k=>k!==sKey); });
+  dbSave(DB); buildSidebar();
+  closeM('editSector');
+  goPage('dashboard');
+  toast('🗑️',`"${s.name}" silindi`);
+}
+
+/* ══════════════════════════════════════════════
+   ADD CARD
+══════════════════════════════════════════════ */
+function openAddCard(sKey, colId) {
+  if(!can('addCard')) { toast('🔒','Yetkiniz yok.'); return; }
+  addingCardSector = sKey;
+  addingCardCol = colId || DB.boards[sKey]?.cols[0]?.id;
+  ['nc-title','nc-desc'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('nc-prio').value='mid';
+  document.getElementById('nc-date').value='';
+  // Populate assign dropdown
+  const assignSel = document.getElementById('nc-assign');
+  assignSel.innerHTML = '<option value="">— Seçin —</option>' + DB.users.filter(u=>DB.sectors[sKey]?.members.includes(u.id)).map(u=>`<option value="${u.id}">${u.av} — ${u.name}</option>`).join('');
+  // Populate col dropdown
+  const colSel = document.getElementById('nc-col');
+  colSel.innerHTML = DB.boards[sKey].cols.map(c=>`<option value="${c.id}" ${c.id===addingCardCol?'selected':''}>${c.name}</option>`).join('');
+  openM('addCard');
+}
+
+function submitCard() {
+  const title = document.getElementById('nc-title').value.trim();
+  if(!title) { toast('⚠️','Başlık zorunlu!'); return; }
+  const colId = document.getElementById('nc-col').value || addingCardCol;
+  const assignId = document.getElementById('nc-assign').value;
+  const s = DB.sectors[addingCardSector];
+  const card = {
+    id: `${addingCardSector}-card-${Date.now()}`,
+    title,
+    prio: document.getElementById('nc-prio').value,
+    date: document.getElementById('nc-date').value || null,
+    desc: document.getElementById('nc-desc').value.trim() || 'Açıklama eklenmedi.',
+    assignees: assignId ? [assignId] : [],
+    assignedTo: assignId || null,
+    color: s.color, sector: addingCardSector, col: colId,
+    checklist:[], comments:[],
+    log:[{text:`${currentRole} kartı oluşturdu`,time:'Şimdi'}],
+  };
+  DB.boards[addingCardSector].cards.push(card);
+  dbSave(DB);
+  buildSidebar();
+  closeM('addCard');
+  renderBoard(addingCardSector);
+  if(currentPage==='dashboard') renderDashboard();
+  toast('✅',`"${title}" eklendi!`);
+}
+
+/* ══════════════════════════════════════════════
+   ADD COLUMN
+══════════════════════════════════════════════ */
+function openAddCol(sKey) {
+  if(!can('addCol')) { toast('🔒','Yetkiniz yok.'); return; }
+  addingColSector = sKey;
+  document.getElementById('cc-name').value='';
+  document.getElementById('cc-wip').value='';
+  openM('addCol');
+}
+
+function submitCol() {
+  const name = document.getElementById('cc-name').value.trim();
+  if(!name) { toast('⚠️','Sütun adı zorunlu!'); return; }
+  const color = document.getElementById('cc-color').value;
+  const wip = parseInt(document.getElementById('cc-wip').value)||null;
+  DB.boards[addingColSector].cols.push({ id:`${addingColSector}-col-${Date.now()}`, name, color, wip });
+  dbSave(DB);
+  closeM('addCol');
+  renderBoard(addingColSector);
+  toast('✅',`"${name}" sütunu eklendi!`);
+}
+
+/* ══════════════════════════════════════════════
+   CARD DETAIL
+══════════════════════════════════════════════ */
+function openCardDetail(cardId, sKey) {
+  const card = DB.boards[sKey]?.cards.find(c=>c.id===cardId);
+  if(!card) return;
+  const s = DB.sectors[sKey];
+  activeCard = {cardId, sKey};
+
+  document.getElementById('cd-head').textContent = card.title;
+  document.getElementById('cd-title').textContent = card.title;
+  document.getElementById('cd-badge').textContent = `${s.icon} ${s.name}`;
+  document.getElementById('cd-badge').style.cssText = `background:${s.color}15;color:${s.color};border:1px solid ${s.color}30`;
+  document.getElementById('cd-desc').textContent = card.desc;
+
+  const pLabels = {urgent:'🔴 Acil',high:'🟠 Yüksek',mid:'🔵 Orta',low:'⚪ Düşük'};
+  const colName = DB.boards[sKey].cols.find(c=>c.id===card.col)?.name||card.col;
+  document.getElementById('cd-details').innerHTML = `
+    <div style="display:flex;justify-content:space-between;font-size:12px;padding:7px 0;border-bottom:1px solid var(--rim)"><span style="color:var(--t3)">Durum</span><span style="font-weight:600">${colName}</span></div>
+    <div style="display:flex;justify-content:space-between;font-size:12px;padding:7px 0;border-bottom:1px solid var(--rim)"><span style="color:var(--t3)">Öncelik</span><span>${pLabels[card.prio]}</span></div>
+    <div style="display:flex;justify-content:space-between;font-size:12px;padding:7px 0;border-bottom:1px solid var(--rim)"><span style="color:var(--t3)">Son Tarih</span><span style="font-weight:600">${card.date||'—'}</span></div>
+    <div style="display:flex;justify-content:space-between;align-items:center;font-size:12px;padding:7px 0"><span style="color:var(--t3)">Atananlar</span><div style="display:flex;gap:3px">${card.assignees.map(uid=>{const u=DB.users.find(x=>x.id===uid);return u?`<div style="width:20px;height:20px;border-radius:5px;background:${u.color};display:flex;align-items:center;justify-content:center;font-size:8px;font-weight:800;color:white;title='${u.name}'">${u.av}</div>`:''}).join('')}</div></div>`;
+
+  document.getElementById('cd-checks').innerHTML = card.checklist.map(ck=>
+    `<div class="checklist-item">
+      <input type="checkbox" id="ck-${ck.id}" ${ck.done?'checked':''} onchange="toggleCheck('${cardId}','${sKey}','${ck.id}',this.checked)" ${can('editCard')?'':'disabled'}>
+      <label for="ck-${ck.id}" class="${ck.done?'done':''}">${ck.text}</label>
+    </div>`
+  ).join('') || `<div style="font-size:12px;color:var(--t3);padding:8px 0">Alt görev yok</div>`;
+
+  document.getElementById('cd-comments').innerHTML = card.comments.map(c=>
+    `<div class="comment-item">
+      <div class="comment-av" style="background:${AV_COLORS[c.av]||'#6B7280'}">${c.av}</div>
+      <div class="comment-bubble">
+        <div class="comment-author">${c.av}</div>
+        <div class="comment-text">${c.text}</div>
+        <div class="comment-time">${c.time}</div>
+      </div>
+    </div>`
+  ).join('') || `<div style="font-size:12px;color:var(--t3);padding:8px 0">Henüz yorum yok</div>`;
+
+  document.getElementById('cd-log').innerHTML = card.log.map(l=>
+    `<div class="log-item"><div class="log-dot"></div><div class="log-text">${l.text}</div><div class="log-time">${l.time}</div></div>`
+  ).join('');
+
+  document.getElementById('new-comment').disabled = !can('editCard');
+  openM('cardDetail');
+}
+
+const AV_COLORS = {'AY':'#3D7FFF','FD':'#00C87A','MK':'#A855F7','ZA':'#F59E0B','EK':'#F97316','SY':'#06B6D4'};
+
+function toggleCheck(cardId, sKey, ckId, done) {
+  const card = DB.boards[sKey]?.cards.find(c=>c.id===cardId);
+  if(!card) return;
+  const ck = card.checklist.find(c=>c.id===ckId);
+  if(ck) { ck.done=done; dbSave(DB); renderBoard(sKey); }
+}
+function addCheck() {
+  if(!activeCard) return;
+  const {cardId,sKey}=activeCard;
+  const card = DB.boards[sKey]?.cards.find(c=>c.id===cardId);
+  const inp = document.getElementById('new-ck');
+  if(!card||!inp.value.trim()) return;
+  card.checklist.push({id:`ck-${Date.now()}`,text:inp.value.trim(),done:false});
+  dbSave(DB); inp.value='';
+  openCardDetail(cardId,sKey); renderBoard(sKey);
+}
+function addComment() {
+  if(!activeCard) return;
+  const {cardId,sKey}=activeCard;
+  const card = DB.boards[sKey]?.cards.find(c=>c.id===cardId);
+  const inp = document.getElementById('new-comment');
+  if(!card||!inp.value.trim()) return;
+  const u = getCurrentUser();
+  card.comments.push({av:u.av,text:inp.value.trim(),time:'Şimdi'});
+  card.log.unshift({text:`${u.av} yorum ekledi`,time:'Şimdi'});
+  dbSave(DB); inp.value='';
+  openCardDetail(cardId,sKey);
+  toast('💬','Yorum eklendi!');
+}
+
+/* ══════════════════════════════════════════════
+   USERS PAGE
+══════════════════════════════════════════════ */
+function renderUsers() {
+  if(!can('manageUsers')) {
+    document.getElementById('usersContent').innerHTML = `<div class="perm-gate"><div class="pg-icon">🔒</div><div class="pg-title">Erişim Yok</div><div class="pg-sub">Kullanıcı yönetimi için Admin yetkisi gereklidir.</div></div>`;
+    return;
+  }
+  const rows = DB.users.map(u=>{
+    const r = ROLES[u.role];
+    const chips = u.sectors.map(sKey=>{
+      const s=DB.sectors[sKey]; if(!s) return '';
+      return `<span style="padding:2px 7px;border-radius:4px;font-size:10px;font-weight:700;background:${s.color}12;color:${s.color};border:1px solid ${s.color}25">${s.icon} ${s.short}</span>`;
+    }).join('');
+    return `<tr>
+      <td><div class="user-cell">
+        <div class="user-av" style="background:${u.color}">${u.av}</div>
+        <div><div style="font-weight:600;color:var(--t0)">${u.name}</div><div style="font-size:11px;color:var(--t3)">${u.email}</div></div>
+      </div></td>
+      <td><span class="role-badge ${r.badge}">${r.name}</span></td>
+      <td><div style="display:flex;flex-wrap:wrap;gap:4px">${chips||'<span style="color:var(--t3);font-size:12px">—</span>'}</div></td>
+      <td><span class="ni-badge nb-green">Aktif</span></td>
+      <td><div style="display:flex;gap:5px">
+        <button class="btn btn-ghost btn-xs" onclick="toast('✏️','Yakında...')">Düzenle</button>
+        <button class="btn btn-danger btn-xs" onclick="removeUser('${u.id}','${u.name}')">Kaldır</button>
+      </div></td>
+    </tr>`;
+  }).join('');
+
+  document.getElementById('usersContent').innerHTML = `
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">
+      <div>
+        <div style="font-size:20px;font-weight:800;color:var(--t0)">${DB.users.length} Kullanıcı</div>
+        <div style="font-size:13px;color:var(--t2);margin-top:2px">Rol ve sektör erişim yönetimi</div>
+      </div>
+      <div style="display:flex;gap:8px">
+        <button class="btn btn-ghost btn-sm" onclick="if(confirm('DB sıfırlansın mı?')){destroyCharts();DB=dbReset();initApp();toast('🔄','DB sıfırlandı!')}">🔄 DB Sıfırla</button>
+        <button class="btn btn-primary" onclick="openM('addUser')">+ Kullanıcı Ekle</button>
+      </div>
+    </div>
+    <div style="background:var(--bg1);border:1px solid var(--rim);border-radius:var(--radlg);overflow:hidden">
+      <table class="data-table">
+        <thead><tr><th>Kullanıcı</th><th>Rol</th><th>Sektör Erişimi</th><th>Durum</th><th>İşlem</th></tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </div>`;
+}
+/* ══════════════════════════════════════════════
+   SECTOR WIZARD
+══════════════════════════════════════════════ */
+const ICONS = ['💻','📱','🌐','🔧','⚙️','🏗️','📊','💰','💼','🎯','📢','🎨','🚀','🏆','👥','🤝','📦','🚚','🔬','🎓','🏥','⚡','🌟','🔑'];
+const COLORS = ['#3D7FFF','#7C3AED','#00C87A','#F59E0B','#FF4560','#F97316','#06B6D4','#EC4899','#10B981','#8B5CF6','#EF4444','#14B8A6'];
+
+let wzStep = 1;
+let wzData = { name:'', short:'', icon:'💼', color:'#3D7FFF', cols:[], members:[] };
+
+function openAddSector() {
+  if(!can('addSector')) { toast('🔒','Yetkiniz yok.'); return; }
+  wzStep = 1;
+  wzData = { name:'', short:'', icon:'💼', color:'#3D7FFF', cols:['Backlog','Yapılacak','Devam Ediyor','Gözden Geçirme','Tamamlandı'], members:[] };
+
+  // Build icon grid
+  document.getElementById('iconGrid').innerHTML = ICONS.map(ic=>
+    `<div class="icon-opt ${ic===wzData.icon?'sel':''}" onclick="wzSelIcon('${ic}',this)">${ic}</div>`
+  ).join('');
+  // Build color grid
+  document.getElementById('colorGrid').innerHTML = COLORS.map(c=>
+    `<div class="color-swatch ${c===wzData.color?'sel':''}" style="background:${c}" data-c="${c}" onclick="wzSelColor('${c}',this)"></div>`
+  ).join('');
+  // Build columns list
+  renderWzCols();
+  // Build members list
+  document.getElementById('wz-members').innerHTML = DB.users.filter(u=>u.role!=='admin').map(u=>
+    `<div class="member-item" id="wm-${u.id}" onclick="wzToggleMember('${u.id}',this)">
+      <input type="checkbox" style="accent-color:#3D7FFF" ${wzData.members.includes(u.id)?'checked':''}>
+      <div class="user-av" style="background:${u.color};width:26px;height:26px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:800;color:white">${u.av}</div>
+      <span style="font-size:13px;font-weight:600;color:var(--t0)">${u.name}</span>
+      <span class="role-badge ${ROLES[u.role].badge}" style="margin-left:auto">${ROLES[u.role].name}</span>
+    </div>`
+  ).join('');
+
+  wzUpdateUI();
+  openM('addSector');
+}
+
+function wzSelIcon(ic, el) {
+  wzData.icon = ic;
+  document.querySelectorAll('#iconGrid .icon-opt').forEach(e=>e.classList.remove('sel'));
+  el.classList.add('sel');
+  updatePreview();
+}
+function wzSelColor(c, el) {
+  wzData.color = c;
+  document.querySelectorAll('#colorGrid .color-swatch').forEach(e=>e.classList.remove('sel'));
+  el.classList.add('sel');
+  updatePreview();
+}
+function wzToggleMember(uid, row) {
+  const idx = wzData.members.indexOf(uid);
+  if(idx>-1) wzData.members.splice(idx,1); else wzData.members.push(uid);
+  row.classList.toggle('sel', wzData.members.includes(uid));
+  row.querySelector('input').checked = wzData.members.includes(uid);
+}
+function renderWzCols() {
+  document.getElementById('wz-cols').innerHTML = wzData.cols.map((c,i)=>
+    `<div class="col-chip"><span>${c}</span>${wzData.cols.length>2?`<span class="col-chip-x" onclick="wzRemoveCol(${i})">✕</span>`:''}</div>`
+  ).join('');
+}
+function addWizardCol() {
+  const inp = document.getElementById('new-col-input');
+  if(!inp.value.trim()) return;
+  wzData.cols.push(inp.value.trim()); inp.value='';
+  renderWzCols();
+}
+function wzRemoveCol(i) { wzData.cols.splice(i,1); renderWzCols(); }
+function updatePreview() {
+  document.getElementById('prev-icon').textContent = wzData.icon;
+  document.getElementById('prev-icon').style.background = wzData.color + '20';
+  document.getElementById('prev-name').textContent = wzData.name || 'Sektör Adı';
+  const badge = document.getElementById('prev-badge');
+  badge.textContent = (wzData.short||'AB') + ' Board';
+  badge.style.cssText = `display:inline-flex;align-items:center;gap:5px;padding:2px 9px;border-radius:20px;font-size:10px;font-weight:700;background:${wzData.color}15;color:${wzData.color};border:1px solid ${wzData.color}30`;
+}
+
+function wzUpdateUI() {
+  ['wz-s1','wz-s2','wz-s3','wz-s4'].forEach((id,i)=>{
+    const el = document.getElementById(id);
+    el.classList.remove('active','done');
+    if(i+1===wzStep) el.classList.add('active');
+    else if(i+1<wzStep) el.classList.add('done');
+  });
+  ['wz-p1','wz-p2','wz-p3','wz-p4'].forEach((id,i)=>{
+    document.getElementById(id).classList.toggle('active', i+1===wzStep);
+  });
+  document.getElementById('wz-title-label').textContent = `Adım ${wzStep}/4`;
+  document.getElementById('wz-back-btn').style.display = wzStep>1 ? 'inline-flex' : 'none';
+  document.getElementById('wz-next-btn').textContent = wzStep===4 ? '✓ Sektör Oluştur' : 'Devam →';
+}
+
+function wizardBack() { if(wzStep>1) { wzStep--; wzUpdateUI(); } }
+function wizardNext() {
+  // Validate each step
+  if(wzStep===1) {
+    wzData.name = document.getElementById('ws-name').value.trim();
+    wzData.short = document.getElementById('ws-short').value.trim().toUpperCase() || wzData.name.slice(0,4).toUpperCase();
+    if(!wzData.name) { toast('⚠️','Sektör adı zorunlu!'); return; }
+  }
+  if(wzStep===4) { createSector(); return; }
+  wzStep++;
+  if(wzStep===2) updatePreview();
+  wzUpdateUI();
+}
+
+function createSector() {
+  const sKey = 'sec_' + Date.now();
+  const allMembers = [...new Set(['u1',...wzData.members])];
+  // Add sector
+  DB.sectors[sKey] = { id:sKey, name:wzData.name, icon:wzData.icon, color:wzData.color, short:wzData.short, members:allMembers };
+  // Create board with columns
+  DB.boards[sKey] = {
+    cols: wzData.cols.map((name,i)=>({ id:`${sKey}-col-${i}`, name, color:i===0?'#6B7280':i===wzData.cols.length-1?'#00C87A':wzData.color, wip:null })),
+    cards: [],
+  };
+  // Update user sector access
+  allMembers.forEach(uid=>{ const u=DB.users.find(x=>x.id===uid); if(u && !u.sectors.includes(sKey)) u.sectors.push(sKey); });
+  dbSave(DB);
+  buildSidebar();
+  if(currentPage==='dashboard') renderDashboard();
+  closeM('addSector');
+  toast('🎉',`"${wzData.name}" board'u oluşturuldu!`);
+  setTimeout(()=>goPage(`board-${sKey}`), 400);
+}
+
+/* ══════════════════════════════════════════════
+   SEARCH
+══════════════════════════════════════════════ */
+function doSearch(q) {
+  if(!q||q.length<2) return;
+  const results = [];
+  getAccessibleSectors().forEach(sKey=>{
+    DB.boards[sKey]?.cards.filter(c=>c.title.toLowerCase().includes(q.toLowerCase())).forEach(c=>results.push({...c,sKey}));
+  });
+  if(results.length) toast('🔍',`${results.length} kart bulundu`);
+}
+
+/* ══════════════════════════════════════════════
+   SETTINGS
+══════════════════════════════════════════════ */
+function renderSettings() {
+  document.getElementById('settingsContent').innerHTML = `
+    <div style="max-width:540px">
+      <div style="font-size:20px;font-weight:800;color:var(--t0);margin-bottom:20px">Ayarlar</div>
+
+      <div style="background:var(--bg1);border:1px solid var(--rim);border-radius:var(--radlg);padding:24px;margin-bottom:16px">
+        <div style="font-size:14px;font-weight:700;color:var(--t0);margin-bottom:14px">Tema</div>
+        <div style="display:flex;gap:10px">
+          <button class="btn btn-ghost" onclick="setTheme('dark')">🌙 Koyu</button>
+          <button class="btn btn-ghost" onclick="setTheme('light')">☀️ Açık</button>
+        </div>
+      </div>
+
+      <div style="background:var(--bg1);border:1px solid var(--rim);border-radius:var(--radlg);padding:24px;margin-bottom:16px">
+        <div style="font-size:14px;font-weight:700;color:var(--t0);margin-bottom:6px">Veritabanı — localStorage</div>
+        <div class="db-indicator" style="margin-bottom:12px"><div class="db-dot"></div>Aktif · ${new TextEncoder().encode(localStorage.getItem(DB_KEY)||'').length} bytes</div>
+        <div style="display:flex;gap:8px">
+          <button class="btn btn-ghost btn-sm" onclick="exportDB()">📥 JSON Aktar</button>
+          <button class="btn btn-danger btn-sm" onclick="if(confirm('Tüm veri silinecek!')){destroyCharts();DB=dbReset();initApp();toast('🔄','DB sıfırlandı!')}">🗑️ Sıfırla</button>
+        </div>
+      </div>
+
+      <!-- SUPABASE SYNC PANEL -->
+      <div style="background:var(--bg1);border:1px solid rgba(61,127,255,.25);border-radius:var(--radlg);padding:24px;margin-bottom:16px;position:relative;overflow:hidden">
+        <div style="position:absolute;top:0;left:20%;right:20%;height:1px;background:linear-gradient(90deg,transparent,rgba(61,127,255,.4),transparent)"></div>
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">
+          <div style="font-size:14px;font-weight:700;color:var(--t0)">☁️ Supabase Sync</div>
+          <div class="db-indicator" id="sb-status-badge" style="margin-left:auto"><div class="db-dot err" id="sb-dot"></div><span id="sb-status-txt">Bağlı değil</span></div>
+        </div>
+        <div style="font-size:12px;color:var(--t2);margin-bottom:14px;line-height:1.55">
+          Verilerinizi Supabase'e senkronize edin. Önce <a href="https://supabase.com" target="_blank" style="color:#7BAEFF">supabase.com</a>'dan ücretsiz proje oluşturun.
+        </div>
+        <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:14px">
+          <div style="display:flex;flex-direction:column;gap:4px">
+            <label style="font-size:10px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;color:var(--t2)">Project URL</label>
+            <input id="sb-url-inp" placeholder="https://xxxx.supabase.co"
+              value="${localStorage.getItem('fb_sb_url')||''}"
+              style="background:var(--bg2);border:1px solid var(--rim);border-radius:8px;padding:10px 14px;font-size:13px;color:var(--t1);outline:none;transition:border-color .15s;width:100%"
+              onfocus="this.style.borderColor='rgba(61,127,255,.5)'" onblur="this.style.borderColor=''">
+          </div>
+          <div style="display:flex;flex-direction:column;gap:4px">
+            <label style="font-size:10px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;color:var(--t2)">Anon Key</label>
+            <input id="sb-key-inp" placeholder="eyJhbGci..."
+              value="${localStorage.getItem('fb_sb_key')||''}"
+              style="background:var(--bg2);border:1px solid var(--rim);border-radius:8px;padding:10px 14px;font-size:13px;color:var(--t1);outline:none;transition:border-color .15s;width:100%;font-family:var(--ffm)"
+              onfocus="this.style.borderColor='rgba(61,127,255,.5)'" onblur="this.style.borderColor=''">
+          </div>
+        </div>
+        <div id="sb-err" style="display:none;font-size:12px;color:#FF8080;background:rgba(255,69,96,.1);border:1px solid rgba(255,69,96,.2);border-radius:7px;padding:9px 12px;margin-bottom:10px"></div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button class="btn btn-primary btn-sm" onclick="sbTestConnect()">🔌 Bağlan & Test Et</button>
+          <button class="btn btn-ghost btn-sm" id="sb-push-btn" onclick="sbPushAll()" style="display:none">☁️ Tümünü Yükle</button>
+          <button class="btn btn-ghost btn-sm" id="sb-pull-btn" onclick="sbPullAll()" style="display:none">⬇️ Supabase'den Çek</button>
+        </div>
+        <div id="sb-progress" style="display:none;margin-top:12px">
+          <div style="font-size:12px;color:var(--t2);margin-bottom:6px" id="sb-progress-txt">Yükleniyor...</div>
+          <div style="height:4px;background:var(--bg3);border-radius:2px;overflow:hidden">
+            <div id="sb-progress-bar" style="height:100%;background:linear-gradient(90deg,#3D7FFF,#7C3AED);border-radius:2px;width:0%;transition:width .3s"></div>
+          </div>
+        </div>
+      </div>
+
+      <div style="background:var(--bg1);border:1px solid var(--rim);border-radius:var(--radlg);padding:24px;margin-bottom:16px">
+        <div style="font-size:14px;font-weight:700;color:var(--t0);margin-bottom:10px">v3 Özellikler</div>
+        <div style="display:flex;flex-direction:column;gap:8px;font-size:13px;color:var(--t2)">
+          <div>🖱️ <strong style="color:var(--t0)">Sağ tık menüsü</strong> — Düzenle, arşivle, sil</div>
+          <div>📦 <strong style="color:var(--t0)">Arşiv</strong> — Geri al veya kalıcı sil</div>
+          <div>📊 <strong style="color:var(--t0)">Grafikler</strong> — 4 Chart.js grafiği</div>
+          <div>🔍 <strong style="color:var(--t0)">Gelişmiş filtre</strong> — Öncelik, kişi, metin</div>
+          <div>⏰ <strong style="color:var(--t0)">Deadline uyarısı</strong> — Renk rozetleri</div>
+          <div>✏️ <strong style="color:var(--t0)">Sektör düzenle/sil</strong></div>
+          <div>☁️ <strong style="color:var(--t0)">Supabase Sync</strong> — Ayarlardan bağlan</div>
+        </div>
+      </div>
+
+      <div style="background:var(--bg1);border:1px solid var(--rim);border-radius:var(--radlg);padding:24px">
+        <div style="font-size:14px;font-weight:700;color:var(--t0);margin-bottom:14px">Rol Yetkileri</div>
+        ${Object.entries(ROLES).map(([k,r])=>`
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--rim)">
+            <span class="role-badge ${r.badge}">${r.name}</span>
+            <div style="display:flex;gap:5px;flex-wrap:wrap;justify-content:flex-end">
+              ${Object.entries(r.can).filter(([,v])=>v).map(([cap])=>`<span style="font-size:10px;padding:2px 7px;border-radius:4px;background:var(--glass2);color:var(--t2)">${cap}</span>`).join('')}
+            </div>
+          </div>`).join('')}
+      </div>
+    </div>`;
+}
+
+function exportDB() {
+  const blob = new Blob([JSON.stringify(DB,null,2)], {type:'application/json'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'flowboard-export.json';
+  a.click();
+  toast('📥','DB dışa aktarıldı!');
+}
+
+/* ══════════════════════════════════════════════
+   NOTIFICATIONS
+══════════════════════════════════════════════ */
+function buildNotifs() {
+  const notifs=[
+    {ic:'🔴',cls:'rgba(255,69,96,.15)',t:'Acil Görev',d:'"API Entegrasyonu" son tarihi bugün!',time:'5 dk',unread:true},
+    {ic:'💬',cls:'rgba(61,127,255,.15)',t:'Yeni Yorum',d:'Fatma D. "Dashboard"a yorum ekledi',time:'18 dk',unread:true},
+    {ic:'👤',cls:'rgba(168,85,247,.15)',t:'Atama',d:'Emre K. "Depo sistemi" kartını üstlendi',time:'1 saat',unread:true},
+    {ic:'✅',cls:'rgba(0,200,122,.12)',t:'Tamamlandı',d:'"Tedarik Zinciri Audit" bitti',time:'2 saat',unread:false},
+    {ic:'📋',cls:'rgba(61,127,255,.12)',t:'Yeni Kart',d:'Finans sektörüne görev eklendi',time:'Dün',unread:false},
+  ];
+  document.getElementById('notifList').innerHTML = notifs.map(n=>
+    `<div class="nd-item ${n.unread?'unread':''}">
+      <div class="nd-ic" style="background:${n.cls}">${n.ic}</div>
+      <div><div class="nd-t">${n.t}</div><div class="nd-d">${n.d}</div><div class="nd-time">${n.time} önce</div></div>
+      ${n.unread?'<div class="nd-udot"></div>':''}
+    </div>`
+  ).join('');
+}
+
+/* ══════════════════════════════════════════════
+   MODAL HELPERS
+══════════════════════════════════════════════ */
+function openM(id) {
+  if(id==='addUser') { openM_addUser(); return; }
+  document.getElementById('m-'+id).classList.add('open');
+}
+function closeM(id) { document.getElementById('m-'+id).classList.remove('open'); }
+document.querySelectorAll('.modal-bg').forEach(m=>m.addEventListener('click',e=>{if(e.target===m)m.classList.remove('open')}));
+document.addEventListener('keydown',e=>{if(e.key==='Escape'){document.querySelectorAll('.modal-bg.open').forEach(m=>m.classList.remove('open'));document.getElementById('notifD').classList.remove('open');hideCtxMenu();}});
+
+/* ══════════════════════════════════════════════
+   USER MANAGEMENT  (v3 — fixed)
+══════════════════════════════════════════════ */
+function openM_addUser() {
+  // Reset fields
+  ['uu-name','uu-email'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+  const roleEl=document.getElementById('uu-role'); if(roleEl) roleEl.value='member';
+  const colorEl=document.getElementById('uu-color'); if(colorEl) colorEl.value='#3D7FFF';
+  // Build sector checkboxes dynamically
+  const el = document.getElementById('uu-sectors');
+  if(el) {
+    el.innerHTML = Object.entries(DB.sectors).map(([k,s])=>
+      `<label style="display:flex;align-items:center;gap:6px;padding:5px 10px;border-radius:6px;border:1px solid var(--rim);cursor:pointer;font-size:12px;color:var(--t2);transition:all .12s;user-select:none">
+        <input type="checkbox" name="uu-sec" value="${k}" style="accent-color:${s.color}"> ${s.icon} ${s.name}
+      </label>`
+    ).join('');
+  }
+  // Generate invite link
+  const linkEl = document.getElementById('inviteLink');
+  if(linkEl) linkEl.textContent = `https://flowboard.app/invite/${Math.random().toString(36).slice(2,10)}`;
+  document.getElementById('m-addUser').classList.add('open');
+}
+
+function submitUser() {
+  const name  = (document.getElementById('uu-name')?.value||'').trim();
+  const email = (document.getElementById('uu-email')?.value||'').trim();
+  if(!name)  { toast('⚠️','Ad Soyad zorunlu!'); return; }
+  if(!email) { toast('⚠️','E-posta zorunlu!');  return; }
+  // Check duplicate email
+  if(DB.users.find(u=>u.email.toLowerCase()===email.toLowerCase())) {
+    toast('⚠️','Bu e-posta zaten kayıtlı!'); return;
+  }
+  const role    = document.getElementById('uu-role')?.value  || 'member';
+  const color   = document.getElementById('uu-color')?.value || '#3D7FFF';
+  const selSecs = [...document.querySelectorAll('input[name="uu-sec"]:checked')].map(x=>x.value);
+  // Build initials (max 2 chars)
+  const initials = name.split(' ').map(w=>w[0]||'').join('').slice(0,2).toUpperCase() || '??';
+  const newUser = {
+    id: 'u' + Date.now(),
+    name, email, role,
+    av: initials,
+    color,
+    sectors: selSecs,
+  };
+  DB.users.push(newUser);
+  // Grant board member access for selected sectors
+  selSecs.forEach(sKey=>{
+    if(DB.sectors[sKey] && !DB.sectors[sKey].members.includes(newUser.id))
+      DB.sectors[sKey].members.push(newUser.id);
+  });
+  dbSave(DB);
+  buildSidebar();
+  if(currentPage==='users') renderUsers();
+  closeM('addUser');
+  toast('✅', `${name} eklendi!`);
+}
+
+function sendInvite() {
+  const email = (document.getElementById('uu-email')?.value||'').trim();
+  if(!email) { toast('⚠️','Önce e-posta girin!'); return; }
+  toast('📧', `Davet linki → ${email}`);
+}
+
+function copyInvite() {
+  const link = document.getElementById('inviteLink')?.textContent || '';
+  navigator.clipboard?.writeText(link).catch(()=>{});
+  toast('📋','Davet linki kopyalandı!');
+}
+
+function removeUser(uid, name) {
+  if(!confirm(`${name} kullanıcısı kaldırılsın mı?`)) return;
+  DB.users = DB.users.filter(u=>u.id!==uid);
+  Object.values(DB.sectors).forEach(s=>{ s.members = s.members.filter(m=>m!==uid); });
+  dbSave(DB);
+  buildSidebar();
+  renderUsers();
+  toast('🗑️', `${name} kaldırıldı`);
+}
+
+/* ══════════════════════════════════════════════
+   THEME / SIDEBAR / TOAST
+══════════════════════════════════════════════ */
+function setTheme(t) {
+  document.documentElement.setAttribute('data-theme',t);
+  document.getElementById('darkBtn').classList.toggle('on',t==='dark');
+  document.getElementById('lightBtn').classList.toggle('on',t==='light');
+  // Re-render charts if on stats page
+  if(currentPage==='stats') renderStats();
+}
+function toggleNotif() { document.getElementById('notifD').classList.toggle('open'); }
+function toggleSB() { const s=document.getElementById('sidebar'),o=document.getElementById('mobOv'); s.classList.toggle('mob-open'); o.style.display=s.classList.contains('mob-open')?'block':'none'; }
+function closeSB() { document.getElementById('sidebar').classList.remove('mob-open'); document.getElementById('mobOv').style.display='none'; }
+let _tt;
+function toast(ic,msg) {
+  clearTimeout(_tt);
+  document.getElementById('tIc').textContent=ic;
+  document.getElementById('tMsg').textContent=msg;
+  const t=document.getElementById('toast');
+  t.classList.add('show');
+  _tt=setTimeout(()=>t.classList.remove('show'),3200);
+}/* ══════════════════════════════════════════════
+   SUPABASE SYNC — native fetch, no SDK
+══════════════════════════════════════════════ */
+let SB_URL_S = '', SB_KEY_S = '';
+
+function sbSetStatus(ok, msg) {
+  const dot = document.getElementById('sb-dot');
+  const txt = document.getElementById('sb-status-txt');
+  if(!dot||!txt) return;
+  dot.className = 'db-dot' + (ok ? '' : ' err');
+  txt.textContent = msg;
+}
+function sbSetProgress(pct, msg) {
+  const bar = document.getElementById('sb-progress-bar');
+  const txt = document.getElementById('sb-progress-txt');
+  const wrap = document.getElementById('sb-progress');
+  if(!bar||!txt||!wrap) return;
+  wrap.style.display = pct >= 0 ? 'block' : 'none';
+  if(pct >= 0) { bar.style.width = pct + '%'; txt.textContent = msg; }
+}
+function sbShowErr(msg) {
+  const el = document.getElementById('sb-err');
+  if(!el) return;
+  el.style.display = msg ? 'block' : 'none';
+  el.textContent = msg;
+}
+
+async function sbFetch(method, path, body) {
+  const res = await fetch(`${SB_URL_S}/rest/v1/${path}`, {
+    method,
+    headers: {
+      'apikey':        SB_KEY_S,
+      'Authorization': `Bearer ${SB_KEY_S}`,
+      'Content-Type':  'application/json',
+      'Prefer':        'return=minimal',
+    },
+    body: body ? JSON.stringify(body) : undefined,
+  });
+  if(!res.ok) {
+    const t = await res.text().catch(()=>'');
+    throw new Error(`HTTP ${res.status}: ${t.slice(0,120)}`);
+  }
+  if(res.status === 204) return [];
+  return res.json().catch(()=>[]);
+}
+
+async function sbTestConnect() {
+  const url = (document.getElementById('sb-url-inp')?.value||'').trim().replace(/\/$/,'');
+  const key = (document.getElementById('sb-key-inp')?.value||'').trim();
+  sbShowErr('');
+  if(!url||!key) { sbShowErr('URL ve Key boş olamaz.'); return; }
+  sbSetStatus(false, 'Test ediliyor...');
+  try {
+    const res = await fetch(`${url}/rest/v1/app_users?select=id&limit=1`, {
+      headers: { 'apikey': key, 'Authorization': `Bearer ${key}` }
+    });
+    if(!res.ok) throw new Error(`HTTP ${res.status} — Tablo bulunamadı. SQL şemasını çalıştırdınız mı?`);
+    SB_URL_S = url; SB_KEY_S = key;
+    localStorage.setItem('fb_sb_url', url);
+    localStorage.setItem('fb_sb_key', key);
+    sbSetStatus(true, 'Bağlandı ✓');
+    document.getElementById('sb-push-btn').style.display = 'inline-flex';
+    document.getElementById('sb-pull-btn').style.display = 'inline-flex';
+    toast('✅', 'Supabase bağlantısı başarılı!');
+  } catch(e) {
+    sbSetStatus(false, 'Hata');
+    sbShowErr('❌ ' + (e.message||'Bağlantı başarısız'));
+  }
+}
+
+async function sbPushAll() {
+  if(!SB_URL_S) { toast('⚠️','Önce bağlanın!'); return; }
+  sbShowErr('');
+
+  // Upsert helper — conflict'te güncelle, yeni ise ekle
+  async function upsert(table, data, onConflict) {
+    if(!data||!data.length) return;
+    const res = await fetch(`${SB_URL_S}/rest/v1/${table}`, {
+      method: 'POST',
+      headers: {
+        'apikey':        SB_KEY_S,
+        'Authorization': `Bearer ${SB_KEY_S}`,
+        'Content-Type':  'application/json',
+        'Prefer':        `resolution=merge-duplicates,return=minimal`,
+      },
+      body: JSON.stringify(data),
+    });
+    if(!res.ok) {
+      const t = await res.text().catch(()=>'');
+      throw new Error(`HTTP ${res.status}: ${t.slice(0,200)}`);
+    }
+  }
+
+  try {
+    sbSetProgress(5, 'Sektörler yükleniyor...');
+    const sectors = Object.values(DB.sectors).map(s=>({id:s.id,name:s.name,icon:s.icon,color:s.color,short:s.short}));
+    await upsert('sectors', sectors);
+
+    sbSetProgress(20, 'Kullanıcılar yükleniyor...');
+    const users = DB.users.map(u=>({id:u.id,name:u.name,email:u.email,role:u.role,av:u.av,color:u.color}));
+    await upsert('app_users', users);
+
+    sbSetProgress(35, 'Sütunlar yükleniyor...');
+    const cols = Object.keys(DB.sectors).flatMap(sKey=>(DB.boards[sKey]?.cols||[]).map(c=>({id:c.id,sector_id:sKey,name:c.name,color:c.color,wip:c.wip,position:c.position||0})));
+    await upsert('columns', cols);
+
+    sbSetProgress(50, 'Kartlar yükleniyor...');
+    const allCards = Object.keys(DB.sectors).flatMap(sKey=>(DB.boards[sKey]?.cards||[]).map(c=>({id:c.id,sector_id:sKey,column_id:c.col,title:c.title,description:c.desc||'',priority:c.prio,due_date:c.date||null,color:c.color,archived:false})));
+    await upsert('cards', allCards);
+
+    sbSetProgress(65, 'Atamalar yükleniyor...');
+    const assigns = Object.keys(DB.sectors).flatMap(sKey=>(DB.boards[sKey]?.cards||[]).flatMap(c=>(c.assignees||[]).map(uid=>({card_id:c.id,user_id:uid}))));
+    await upsert('card_assignees', assigns);
+
+    sbSetProgress(80, 'Üyelikler yükleniyor...');
+    const smem = Object.entries(DB.sectors).flatMap(([sKey,s])=>(s.members||[]).map(uid=>({sector_id:sKey,user_id:uid})));
+    const usec = DB.users.flatMap(u=>(u.sectors||[]).map(sKey=>({user_id:u.id,sector_id:sKey})));
+    await upsert('sector_members', smem);
+    await upsert('user_sectors', usec);
+
+    sbSetProgress(100, '✅ Tamamlandı!');
+    setTimeout(()=>sbSetProgress(-1,''), 2500);
+    toast('☁️', 'Tüm veriler Supabase\'e yüklendi!');
+  } catch(e) {
+    sbSetProgress(-1,'');
+    sbShowErr('❌ Yükleme hatası: ' + e.message);
+    toast('❌', e.message);
+  }
+}
+
+async function sbPullAll() {
+  if(!SB_URL_S) { toast('⚠️','Önce bağlanın!'); return; }
+  if(!confirm('Supabase\'deki veriler localStorage\'ı üzerine yazar. Devam?')) return;
+  sbShowErr('');
+  try {
+    sbSetProgress(10, 'Veriler çekiliyor...');
+    const [sec, usr, col, crd, asgn, smem, usec] = await Promise.all([
+      sbFetch('GET', 'sectors?select=*'),
+      sbFetch('GET', 'app_users?select=*'),
+      sbFetch('GET', 'columns?select=*&order=position'),
+      sbFetch('GET', 'cards?select=*&archived=eq.false'),
+      sbFetch('GET', 'card_assignees?select=*'),
+      sbFetch('GET', 'sector_members?select=*'),
+      sbFetch('GET', 'user_sectors?select=*'),
+    ]);
+    sbSetProgress(70, 'Veriler işleniyor...');
+    // Rebuild DB structure
+    const sectors = {};
+    (sec||[]).forEach(s=>{ sectors[s.id]={...s, members:(smem||[]).filter(m=>m.sector_id===s.id).map(m=>m.user_id)}; });
+    const users = (usr||[]).map(u=>({...u, sectors:(usec||[]).filter(x=>x.user_id===u.id).map(x=>x.sector_id)}));
+    const boards = {};
+    Object.keys(sectors).forEach(sKey=>{
+      boards[sKey] = {
+        cols: (col||[]).filter(c=>c.sector_id===sKey).map(c=>({id:c.id,name:c.name,color:c.color,wip:c.wip,position:c.position})),
+        cards: (crd||[]).filter(c=>c.sector_id===sKey).map(c=>({
+          id:c.id, title:c.title, prio:c.priority, date:c.due_date, desc:c.description,
+          assignees:(asgn||[]).filter(a=>a.card_id===c.id).map(a=>a.user_id),
+          color:c.color, sector:sKey, col:c.column_id,
+          checklist:[], comments:[], log:[{text:'Supabase\'den çekildi',time:'Şimdi'}],
+        })),
+      };
+    });
+    DB = { sectors, users, boards, archive:[] };
+    dbSave(DB);
+    sbSetProgress(100, 'Tamamlandı!');
+    setTimeout(()=>sbSetProgress(-1,''),2000);
+    buildSidebar(); goPage('dashboard');
+    toast('⬇️', 'Supabase\'den veriler çekildi!');
+  } catch(e) {
+    sbSetProgress(-1,'');
+    sbShowErr('❌ Çekme hatası: ' + e.message);
+  }
+}
+
+</script>
+</body>
+</html>
