@@ -96,6 +96,7 @@ input,textarea,select{font-family:var(--ff)}
 .sector-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
 .role-badge{display:inline-flex;align-items:center;gap:5px;padding:2px 9px;border-radius:20px;font-size:10px;font-weight:700;letter-spacing:.3px;margin-top:3px}
 .rb-admin{background:rgba(61,127,255,.15);color:#7BAEFF;border:1px solid rgba(61,127,255,.25)}
+.rb-superadmin{background:linear-gradient(135deg,rgba(255,215,0,.2),rgba(255,165,0,.15));color:#FFD700;border:1px solid rgba(255,215,0,.4);box-shadow:0 0 8px rgba(255,215,0,.15)}
 .rb-manager{background:rgba(0,200,122,.12);color:#5DEBB0;border:1px solid rgba(0,200,122,.2)}
 .rb-member{background:rgba(245,158,11,.12);color:#FCD060;border:1px solid rgba(245,158,11,.2)}
 .rb-viewer{background:rgba(168,85,247,.12);color:#C4AEFF;border:1px solid rgba(168,85,247,.2)}
@@ -401,38 +402,21 @@ input,textarea,select{font-family:var(--ff)}
     <div class="login-head">
       <div class="login-logo">📋</div>
       <div class="login-title">FlowBoard</div>
-      <div class="login-sub">Çok Sektörlü Kanban · v3 · localStorage</div>
-    </div>
-    <div style="padding:0 32px 12px;font-size:11px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:var(--t3)">Rol Seçin</div>
-    <div class="role-grid">
-      <div class="role-card rc-admin sel" onclick="selRole('admin',this)">
-        <div class="rc-check">✓</div><span class="rc-icon">🛡️</span>
-        <div class="rc-name">Admin</div><div class="rc-desc">Tam yetki</div>
-      </div>
-      <div class="role-card rc-manager" onclick="selRole('manager',this)">
-        <div class="rc-check">✓</div><span class="rc-icon">👔</span>
-        <div class="rc-name">Manager</div><div class="rc-desc">Sektör yöneticisi</div>
-      </div>
-      <div class="role-card rc-member" onclick="selRole('member',this)">
-        <div class="rc-check">✓</div><span class="rc-icon">👤</span>
-        <div class="rc-name">Member</div><div class="rc-desc">Atanan kartlar</div>
-      </div>
-      <div class="role-card rc-viewer" onclick="selRole('viewer',this)">
-        <div class="rc-check">✓</div><span class="rc-icon">👁️</span>
-        <div class="rc-name">Viewer</div><div class="rc-desc">Sadece görüntüle</div>
-      </div>
+      <div class="login-sub">Özel İş Takip Sistemi</div>
     </div>
     <div class="login-fields">
-      <div class="lf"><label>E-posta</label><input id="le" value="admin@flowboard.io" placeholder="email..."></div>
-      <div class="lf"><label>Şifre</label><input type="password" id="lp" value="••••••••" placeholder="••••••••"></div>
+      <div class="lf"><label>E-posta veya Kullanıcı Adı</label><input id="le" placeholder="email@sirket.com veya kullanici.adi" autocomplete="email"></div>
+      <div class="lf"><label>Şifre</label>
+        <div style="position:relative">
+          <input type="password" id="lp" placeholder="••••••••" autocomplete="current-password" style="width:100%">
+          <span onclick="togglePassVis('lp',this)" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);cursor:pointer;font-size:14px;color:var(--t3)">👁️</span>
+        </div>
+      </div>
     </div>
-    <div style="padding:0 32px 14px"><button class="login-btn" onclick="doLogin()">Giriş Yap →</button></div>
-    <div style="padding:0 32px 6px;font-size:11px;color:var(--t3)">Hızlı Demo:</div>
-    <div class="demo-chips">
-      <span class="demo-chip" onclick="quickLogin('admin')">🛡️ Admin</span>
-      <span class="demo-chip" onclick="quickLogin('manager')">👔 Manager</span>
-      <span class="demo-chip" onclick="quickLogin('member')">👤 Member</span>
-      <span class="demo-chip" onclick="quickLogin('viewer')">👁️ Viewer</span>
+    <div id="loginErr" style="display:none;margin:0 32px 12px;padding:9px 14px;background:rgba(255,69,96,.1);border:1px solid rgba(255,69,96,.2);border-radius:8px;font-size:12px;color:#FF8080;text-align:center"></div>
+    <div style="padding:0 32px 20px"><button class="login-btn" onclick="doLogin()">Giriş Yap →</button></div>
+    <div style="padding:0 32px 20px;text-align:center">
+      <span style="font-size:11px;color:var(--t3);cursor:pointer;text-decoration:underline" onclick="resetAndReload()">Veriyi sıfırla (ilk kurulum)</span>
     </div>
   </div>
 </div>
@@ -442,7 +426,7 @@ input,textarea,select{font-family:var(--ff)}
   <aside class="sidebar" id="sidebar">
     <div class="sb-brand">
       <div class="sb-logo">📋</div>
-      <div><div class="sb-name">FlowBoard</div><div class="sb-ver">v3 · 6 Yeni Özellik</div></div>
+      <div><div class="sb-name">FlowBoard</div><div class="sb-ver">İş Takip Sistemi</div></div>
     </div>
     <nav class="sb-nav" id="sidebarNav"></nav>
     <div class="theme-toggle">
@@ -537,40 +521,41 @@ input,textarea,select{font-family:var(--ff)}
 <!-- Add User Modal -->
 <div class="modal-bg" id="m-addUser">
   <div class="modal modal-lg">
-    <div class="modal-head"><span class="modal-title">Kullanıcı Ekle / Davet Et</span><div class="modal-close" onclick="closeM('addUser')">✕</div></div>
+    <div class="modal-head"><span class="modal-title">👤 Kullanıcı Ekle</span><div class="modal-close" onclick="closeM('addUser')">✕</div></div>
     <div class="modal-body">
       <div class="mf-row">
         <div class="mf"><label>Ad Soyad *</label><input id="uu-name" placeholder="Örn: Ayşe Kaya"></div>
+        <div class="mf"><label>Kullanıcı Adı *</label><input id="uu-username" placeholder="Örn: ayse.kaya" autocomplete="off"></div>
+      </div>
+      <div class="mf-row">
         <div class="mf"><label>E-posta *</label><input type="email" id="uu-email" placeholder="ayse@sirket.com"></div>
+        <div class="mf"><label>Şifre *</label>
+          <div style="position:relative">
+            <input type="password" id="uu-pass" placeholder="Şifre belirleyin..." autocomplete="new-password" style="width:100%;background:var(--bg2);border:1px solid var(--rim);border-radius:8px;padding:10px 40px 10px 13px;font-size:13px;color:var(--t1);outline:none">
+            <span onclick="togglePassVis('uu-pass',this)" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);cursor:pointer;font-size:14px;color:var(--t3)">👁️</span>
+          </div>
+        </div>
       </div>
       <div class="mf-row">
         <div class="mf"><label>Rol *</label>
           <select id="uu-role">
+            <option value="admin">🛡️ Admin</option>
             <option value="manager">👔 Manager</option>
-            <option value="member">👤 Member</option>
+            <option value="member" selected>👤 Member</option>
             <option value="viewer">👁️ Viewer</option>
           </select>
         </div>
         <div class="mf"><label>Avatar Rengi</label>
           <select id="uu-color">
-            <option value="#3D7FFF">Mavi</option><option value="#00C87A">Yeşil</option><option value="#A855F7">Mor</option>
-            <option value="#F59E0B">Sarı</option><option value="#F97316">Turuncu</option><option value="#FF4560">Kırmızı</option><option value="#06B6D4">Teal</option>
+            <option value="#3D7FFF">🔵 Mavi</option><option value="#00C87A">🟢 Yeşil</option><option value="#A855F7">🟣 Mor</option>
+            <option value="#F59E0B">🟡 Sarı</option><option value="#F97316">🟠 Turuncu</option><option value="#FF4560">🔴 Kırmızı</option><option value="#06B6D4">🩵 Teal</option>
           </select>
         </div>
       </div>
-      <div class="mf"><label>Sektör Erişimleri</label><div id="uu-sectors" style="display:flex;flex-wrap:wrap;gap:7px;padding:10px;background:var(--bg2);border:1px solid var(--rim);border-radius:8px"></div></div>
-      <div style="padding-top:16px;border-top:1px solid var(--rim)">
-        <div style="font-size:12px;font-weight:700;color:var(--t2);margin-bottom:8px">📧 Davet Linki (simülasyon)</div>
-        <div class="invite-box">
-          <div class="invite-link" id="inviteLink">https://flowboard.app/invite/abc123xyz</div>
-          <button class="invite-copy" onclick="copyInvite()">Kopyala</button>
-        </div>
-        <div style="font-size:11px;color:var(--t3);margin-top:6px">Gerçek uygulamada e-posta ile gönderilir.</div>
-      </div>
+      <div class="mf"><label>Sektör Erişimleri</label><div id="uu-sectors" style="display:flex;flex-wrap:wrap;gap:7px;padding:10px;background:var(--bg2);border:1px solid var(--rim);border-radius:8px;min-height:44px"></div></div>
     </div>
     <div class="modal-footer">
       <button class="btn btn-ghost" onclick="closeM('addUser')">İptal</button>
-      <button class="btn btn-success btn-sm" onclick="sendInvite()">📧 Davet Gönder</button>
       <button class="btn btn-primary" onclick="submitUser()">✓ Kullanıcı Ekle</button>
     </div>
   </div>
@@ -756,12 +741,13 @@ function initDB() {
     ops:   { id:'ops',   name:'Operasyon & Lojistik',  icon:'🚚', color:'#F97316', short:'OPS',   members:['u1','u5'] },
   };
   const users = [
-    { id:'u1', name:'Ahmet Yılmaz',   email:'ahmet@co.com',   role:'admin',   av:'AY', color:'#3D7FFF', sectors:['tech','sales','hr','mkt','fin','ops'] },
-    { id:'u2', name:'Fatma Demir',    email:'fatma@co.com',   role:'manager', av:'FD', color:'#00C87A', sectors:['tech','mkt'] },
-    { id:'u3', name:'Mehmet Kaya',    email:'mehmet@co.com',  role:'manager', av:'MK', color:'#A855F7', sectors:['sales','hr'] },
-    { id:'u4', name:'Zeynep Arslan',  email:'zeynep@co.com',  role:'member',  av:'ZA', color:'#F59E0B', sectors:['tech'] },
-    { id:'u5', name:'Emre Koç',       email:'emre@co.com',    role:'member',  av:'EK', color:'#F97316', sectors:['ops','fin'] },
-    { id:'u6', name:'Selin Yıldız',   email:'selin@co.com',   role:'viewer',  av:'SY', color:'#06B6D4', sectors:['mkt','fin'] },
+    { id:'u0', name:'Habib',        email:'habib@izistihdam.com',  role:'superadmin', av:'HB', color:'#FFD700', sectors:['tech','sales','hr','mkt','fin','ops'], password:'Habib2024!' },
+    { id:'u1', name:'Ahmet Yılmaz', email:'ahmet@co.com',          role:'admin',      av:'AY', color:'#3D7FFF', sectors:['tech','sales','hr','mkt','fin','ops'], password:'Admin2024!' },
+    { id:'u2', name:'Fatma Demir',  email:'fatma@co.com',          role:'manager',    av:'FD', color:'#00C87A', sectors:['tech','mkt'], password:'Fatma2024!' },
+    { id:'u3', name:'Mehmet Kaya',  email:'mehmet@co.com',         role:'manager',    av:'MK', color:'#A855F7', sectors:['sales','hr'], password:'Mehmet2024!' },
+    { id:'u4', name:'Zeynep Arslan',email:'zeynep@co.com',         role:'member',     av:'ZA', color:'#F59E0B', sectors:['tech'], password:'Zeynep2024!' },
+    { id:'u5', name:'Emre Koç',     email:'emre@co.com',           role:'member',     av:'EK', color:'#F97316', sectors:['ops','fin'], password:'Emre2024!' },
+    { id:'u6', name:'Selin Yıldız', email:'selin@co.com',          role:'viewer',     av:'SY', color:'#06B6D4', sectors:['mkt','fin'], password:'Selin2024!' },
   ];
   const colDefs = (sKey) => [
     { id:`${sKey}-backlog`, name:'Backlog',        color:'#6B7280', wip:null },
@@ -805,8 +791,10 @@ function generateCards(sKey, s) {
    STATE
 ══════════════════════════════════════════════ */
 let DB = dbLoad() || dbReset();
-let currentRole = 'admin';
-let selLoginRole = 'admin';
+// migrateDB çağrısı aşağıda tanımlandıktan sonra yapılıyor
+let currentRole = 'superadmin';
+let selLoginRole = 'superadmin';
+let currentUserId = null;
 let currentPage = 'dashboard';
 let currentSectorKey = null;
 let addingCardSector = null;
@@ -815,35 +803,117 @@ let addingColSector = null;
 let activeCard = null; // {cardId, sKey}
 
 const ROLES = {
-  admin:   { name:'Admin',   badge:'rb-admin',   color:'#3D7FFF', ind:'ADM', can:{ all:true, addCard:true, moveCard:true, addCol:true, editCard:true, manageUsers:true, addSector:true } },
-  manager: { name:'Manager', badge:'rb-manager', color:'#00C87A', ind:'MGR', can:{ addCard:true, moveCard:true, addCol:true, editCard:true } },
-  member:  { name:'Member',  badge:'rb-member',  color:'#F59E0B', ind:'MBR', can:{ editCard:true } },
-  viewer:  { name:'Viewer',  badge:'rb-viewer',  color:'#A855F7', ind:'VWR', can:{} },
+  superadmin: { name:'Super Admin', badge:'rb-superadmin', color:'#FFD700', ind:'HAB', can:{ all:true, addCard:true, moveCard:true, addCol:true, editCard:true, manageUsers:true, addSector:true, deleteSector:true } },
+  admin:      { name:'Admin',       badge:'rb-admin',      color:'#3D7FFF', ind:'ADM', can:{ addCard:true, moveCard:true, addCol:true, editCard:true, addSector:true } },
+  manager:    { name:'Manager',     badge:'rb-manager',    color:'#00C87A', ind:'MGR', can:{ addCard:true, moveCard:true, addCol:true, editCard:true } },
+  member:     { name:'Member',      badge:'rb-member',     color:'#F59E0B', ind:'MBR', can:{ editCard:true } },
+  viewer:     { name:'Viewer',      badge:'rb-viewer',     color:'#A855F7', ind:'VWR', can:{} },
 };
 
 /* ══════════════════════════════════════════════
-   LOGIN
+   LOGIN — Şifre tabanlı
 ══════════════════════════════════════════════ */
 function selRole(role, el) {
   selLoginRole = role;
   document.querySelectorAll('.role-card').forEach(c=>c.classList.remove('sel'));
   el.classList.add('sel');
 }
+
 function doLogin() {
-  currentRole = selLoginRole;
-  initApp();
+  const input = (document.getElementById('le')?.value||'').trim().toLowerCase();
+  const pass  = (document.getElementById('lp')?.value||'').trim();
+  const errEl = document.getElementById('loginErr');
+
+  // E-posta VEYA kullanıcı adı ile giriş
+  const user = DB.users.find(u =>
+    u.email.toLowerCase() === input ||
+    (u.username||'').toLowerCase() === input
+  );
+
+  if(!user) {
+    errEl.textContent = '❌ E-posta veya kullanıcı adı bulunamadı.';
+    errEl.style.display = 'block'; return;
+  }
+  if(user.password && user.password !== pass) {
+    errEl.textContent = '❌ Şifre yanlış.';
+    errEl.style.display = 'block'; return;
+  }
+
+  errEl.style.display = 'none';
+  currentRole = user.role;
+  currentUserId = user.id;
   document.getElementById('s-login').classList.remove('active');
   document.getElementById('s-app').classList.add('active');
+  initApp();
 }
+
+function resetAndReload() {
+  if(confirm('Tüm veriler sıfırlanacak ve yeni sistem kurulacak. Devam?')) {
+    localStorage.removeItem(DB_KEY);
+    location.reload();
+  }
+}
+
+// Auto-migrate: eski DB'de Habib yoksa ekle
+function migrateDB() {
+  if(!DB.users.find(u=>u.role==='superadmin')) {
+    DB.users.unshift({
+      id:'u0', name:'Habib', email:'habib@izistihdam.com',
+      role:'superadmin', av:'HB', color:'#FFD700',
+      sectors: Object.keys(DB.sectors),
+      password:'Habib2024!',
+    });
+    dbSave(DB);
+  }
+  // Ensure all users have password field
+  DB.users.forEach(u => {
+    if(!u.password) {
+      const defaults = {admin:'Admin2024!',manager:'Manager2024!',member:'Member2024!',viewer:'Viewer2024!'};
+      u.password = defaults[u.role] || 'Flowboard2024!';
+    }
+  });
+  dbSave(DB);
+}
+
+// DB migration sayfa yüklenince otomatik çalışır
+migrateDB();
+
+function togglePassVis(inputId, btn) {
+  const inp = document.getElementById(inputId);
+  if(!inp) return;
+  if(inp.type === 'password') { inp.type = 'text'; btn.textContent = '🙈'; }
+  else { inp.type = 'password'; btn.textContent = '👁️'; }
+}
+
+// Enter tuşu ile giriş
+document.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('lp')?.addEventListener('keydown', e => {
+    if(e.key === 'Enter') doLogin();
+  });
+  document.getElementById('le')?.addEventListener('keydown', e => {
+    if(e.key === 'Enter') document.getElementById('lp')?.focus();
+  });
+});
+
 function quickLogin(role) {
-  selLoginRole = role;
-  document.querySelectorAll('.role-card').forEach(c=>c.classList.remove('sel'));
-  document.querySelector('.rc-'+role)?.classList.add('sel');
-  doLogin();
+  // Sadece geliştirme için — production'da kaldırılabilir
+  const user = DB.users.find(u => u.role === role);
+  if(!user) return;
+  currentRole = role;
+  currentUserId = user.id;
+  document.getElementById('s-login').classList.remove('active');
+  document.getElementById('s-app').classList.add('active');
+  initApp();
 }
+
 function logout() {
+  currentUserId = null;
   document.getElementById('s-app').classList.remove('active');
   document.getElementById('s-login').classList.add('active');
+  const errEl = document.getElementById('loginErr');
+  if(errEl) errEl.style.display = 'none';
+  document.getElementById('le').value = '';
+  document.getElementById('lp').value = '';
 }
 
 /* ══════════════════════════════════════════════
@@ -865,14 +935,15 @@ function initApp() {
 }
 
 function getCurrentUser() {
+  if(currentUserId) return DB.users.find(u=>u.id===currentUserId) || DB.users[0];
   return DB.users.find(u=>u.role===currentRole) || DB.users[0];
 }
 function getAccessibleSectors() {
-  if(currentRole==='admin') return Object.keys(DB.sectors);
   const u = getCurrentUser();
-  return u.sectors.filter(s => DB.sectors[s]);
+  if(currentRole==='superadmin' || currentRole==='admin') return Object.keys(DB.sectors);
+  return (u?.sectors||[]).filter(s => DB.sectors[s]);
 }
-function can(perm) { return !!(ROLES[currentRole].can.all || ROLES[currentRole].can[perm]); }
+function can(perm) { return !!(ROLES[currentRole]?.can?.all || ROLES[currentRole]?.can?.[perm]); }
 
 /* ══════════════════════════════════════════════
    SIDEBAR
@@ -1715,22 +1786,31 @@ function renderUsers() {
     return;
   }
   const rows = DB.users.map(u=>{
-    const r = ROLES[u.role];
-    const chips = u.sectors.map(sKey=>{
+    const r = ROLES[u.role] || ROLES['member'];
+    const isSuperAdmin = u.role === 'superadmin';
+    const chips = (u.sectors||[]).map(sKey=>{
       const s=DB.sectors[sKey]; if(!s) return '';
       return `<span style="padding:2px 7px;border-radius:4px;font-size:10px;font-weight:700;background:${s.color}12;color:${s.color};border:1px solid ${s.color}25">${s.icon} ${s.short}</span>`;
     }).join('');
+    const roleIcon = {superadmin:'👑',admin:'🛡️',manager:'👔',member:'👤',viewer:'👁️'}[u.role]||'👤';
     return `<tr>
       <td><div class="user-cell">
-        <div class="user-av" style="background:${u.color}">${u.av}</div>
-        <div><div style="font-weight:600;color:var(--t0)">${u.name}</div><div style="font-size:11px;color:var(--t3)">${u.email}</div></div>
+        <div class="user-av" style="background:${u.color};${isSuperAdmin?'box-shadow:0 0 8px rgba(255,215,0,.5)':''}">${u.av}</div>
+        <div>
+          <div style="font-weight:600;color:var(--t0);display:flex;align-items:center;gap:6px">
+            ${u.name}${isSuperAdmin?'&nbsp;<span style="font-size:10px;padding:1px 6px;border-radius:20px;background:rgba(255,215,0,.15);color:#FFD700;border:1px solid rgba(255,215,0,.35)">👑 Kurucu</span>':''}
+          </div>
+          <div style="font-size:11px;color:var(--t3)">${u.email}</div>
+        </div>
       </div></td>
-      <td><span class="role-badge ${r.badge}">${r.name}</span></td>
-      <td><div style="display:flex;flex-wrap:wrap;gap:4px">${chips||'<span style="color:var(--t3);font-size:12px">—</span>'}</div></td>
+      <td><span class="role-badge ${r.badge}">${roleIcon} ${r.name}</span></td>
+      <td><div style="display:flex;flex-wrap:wrap;gap:4px">${isSuperAdmin?'<span style="color:var(--t2);font-size:12px">✅ Tümü</span>':(chips||'<span style="color:var(--t3);font-size:12px">—</span>')}</div></td>
       <td><span class="ni-badge nb-green">Aktif</span></td>
       <td><div style="display:flex;gap:5px">
-        <button class="btn btn-ghost btn-xs" onclick="toast('✏️','Yakında...')">Düzenle</button>
-        <button class="btn btn-danger btn-xs" onclick="removeUser('${u.id}','${u.name}')">Kaldır</button>
+        ${isSuperAdmin
+          ? '<span style="font-size:11px;color:var(--t3);padding:4px 8px">🔒 Korumalı</span>'
+          : `<button class="btn btn-ghost btn-xs" onclick="openEditUser('${u.id}')">✏️ Düzenle</button><button class="btn btn-danger btn-xs" onclick="removeUser('${u.id}','${u.name}')">Kaldır</button>`
+        }
       </div></td>
     </tr>`;
   }).join('');
@@ -2027,7 +2107,7 @@ document.addEventListener('keydown',e=>{if(e.key==='Escape'){document.querySelec
 ══════════════════════════════════════════════ */
 function openM_addUser() {
   // Reset fields
-  ['uu-name','uu-email'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+  ['uu-name','uu-username','uu-email','uu-pass'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
   const roleEl=document.getElementById('uu-role'); if(roleEl) roleEl.value='member';
   const colorEl=document.getElementById('uu-color'); if(colorEl) colorEl.value='#3D7FFF';
   // Build sector checkboxes dynamically
@@ -2046,37 +2126,43 @@ function openM_addUser() {
 }
 
 function submitUser() {
-  const name  = (document.getElementById('uu-name')?.value||'').trim();
-  const email = (document.getElementById('uu-email')?.value||'').trim();
-  if(!name)  { toast('⚠️','Ad Soyad zorunlu!'); return; }
-  if(!email) { toast('⚠️','E-posta zorunlu!');  return; }
-  // Check duplicate email
+  const name     = (document.getElementById('uu-name')?.value||'').trim();
+  const username = (document.getElementById('uu-username')?.value||'').trim().toLowerCase();
+  const email    = (document.getElementById('uu-email')?.value||'').trim();
+  const password = (document.getElementById('uu-pass')?.value||'').trim();
+
+  if(!name)     { toast('⚠️','Ad Soyad zorunlu!'); return; }
+  if(!username) { toast('⚠️','Kullanıcı adı zorunlu!'); return; }
+  if(!email)    { toast('⚠️','E-posta zorunlu!'); return; }
+  if(!password) { toast('⚠️','Şifre zorunlu!'); return; }
+  if(password.length < 6) { toast('⚠️','Şifre en az 6 karakter olmalı!'); return; }
+
   if(DB.users.find(u=>u.email.toLowerCase()===email.toLowerCase())) {
     toast('⚠️','Bu e-posta zaten kayıtlı!'); return;
   }
-  const role    = document.getElementById('uu-role')?.value  || 'member';
-  const color   = document.getElementById('uu-color')?.value || '#3D7FFF';
-  const selSecs = [...document.querySelectorAll('input[name="uu-sec"]:checked')].map(x=>x.value);
-  // Build initials (max 2 chars)
+  if(DB.users.find(u=>(u.username||'').toLowerCase()===username)) {
+    toast('⚠️','Bu kullanıcı adı zaten alınmış!'); return;
+  }
+
+  const role     = document.getElementById('uu-role')?.value  || 'member';
+  const color    = document.getElementById('uu-color')?.value || '#3D7FFF';
+  const selSecs  = [...document.querySelectorAll('input[name="uu-sec"]:checked')].map(x=>x.value);
   const initials = name.split(' ').map(w=>w[0]||'').join('').slice(0,2).toUpperCase() || '??';
+
   const newUser = {
     id: 'u' + Date.now(),
-    name, email, role,
-    av: initials,
-    color,
-    sectors: selSecs,
+    name, username, email, password, role,
+    av: initials, color, sectors: selSecs,
   };
   DB.users.push(newUser);
-  // Grant board member access for selected sectors
   selSecs.forEach(sKey=>{
     if(DB.sectors[sKey] && !DB.sectors[sKey].members.includes(newUser.id))
       DB.sectors[sKey].members.push(newUser.id);
   });
-  dbSave(DB);
-  buildSidebar();
+  dbSave(DB); buildSidebar();
   if(currentPage==='users') renderUsers();
   closeM('addUser');
-  toast('✅', `${name} eklendi!`);
+  toast('✅', `${name} eklendi! Kullanıcı adı: ${username}`);
 }
 
 function sendInvite() {
@@ -2084,20 +2170,75 @@ function sendInvite() {
   if(!email) { toast('⚠️','Önce e-posta girin!'); return; }
   toast('📧', `Davet linki → ${email}`);
 }
-
 function copyInvite() {
   const link = document.getElementById('inviteLink')?.textContent || '';
   navigator.clipboard?.writeText(link).catch(()=>{});
   toast('📋','Davet linki kopyalandı!');
 }
 
+function openEditUser(uid) {
+  const u = DB.users.find(x=>x.id===uid); if(!u) return;
+  const sectors = Object.entries(DB.sectors).map(([k,s])=>
+    `<label style="display:flex;align-items:center;gap:6px;padding:5px 10px;border-radius:6px;border:1px solid var(--rim);cursor:pointer;font-size:12px;color:var(--t2)">
+      <input type="checkbox" name="eu-sec" value="${k}" ${(u.sectors||[]).includes(k)?'checked':''} style="accent-color:${s.color}"> ${s.icon} ${s.name}
+    </label>`
+  ).join('');
+  const modal = document.createElement('div');
+  modal.className = 'modal-bg open'; modal.id = 'm-editUser-tmp';
+  modal.innerHTML = `<div class="modal modal-lg">
+    <div class="modal-head"><span class="modal-title">✏️ Kullanıcı Düzenle — ${u.name}</span><div class="modal-close" onclick="document.getElementById('m-editUser-tmp').remove()">✕</div></div>
+    <div class="modal-body">
+      <div class="mf-row">
+        <div class="mf"><label>Ad Soyad</label><input id="eu-name" value="${u.name}"></div>
+        <div class="mf"><label>E-posta</label><input id="eu-email" value="${u.email}"></div>
+      </div>
+      <div class="mf-row">
+        <div class="mf"><label>Rol</label>
+          <select id="eu-role">
+            <option value="admin" ${u.role==='admin'?'selected':''}>🛡️ Admin</option>
+            <option value="manager" ${u.role==='manager'?'selected':''}>👔 Manager</option>
+            <option value="member" ${u.role==='member'?'selected':''}>👤 Member</option>
+            <option value="viewer" ${u.role==='viewer'?'selected':''}>👁️ Viewer</option>
+          </select>
+        </div>
+        <div class="mf"><label>Yeni Şifre (boş = değişmez)</label><input type="password" id="eu-pass" placeholder="Yeni şifre..."></div>
+      </div>
+      <div class="mf"><label>Sektör Erişimleri</label>
+        <div style="display:flex;flex-wrap:wrap;gap:6px;padding:10px;background:var(--bg2);border:1px solid var(--rim);border-radius:8px">${sectors}</div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="document.getElementById('m-editUser-tmp').remove()">İptal</button>
+      <button class="btn btn-primary" onclick="saveEditUser('${uid}')">Kaydet</button>
+    </div>
+  </div>`;
+  document.body.appendChild(modal);
+  modal.addEventListener('click', e=>{ if(e.target===modal) modal.remove(); });
+}
+
+function saveEditUser(uid) {
+  const u = DB.users.find(x=>x.id===uid); if(!u) return;
+  u.name  = document.getElementById('eu-name')?.value.trim() || u.name;
+  u.email = document.getElementById('eu-email')?.value.trim() || u.email;
+  u.role  = document.getElementById('eu-role')?.value || u.role;
+  const newPass = document.getElementById('eu-pass')?.value.trim();
+  if(newPass) u.password = newPass;
+  const selSecs = [...document.querySelectorAll('input[name="eu-sec"]:checked')].map(x=>x.value);
+  Object.values(DB.sectors).forEach(s=>{ s.members=(s.members||[]).filter(m=>m!==uid); });
+  selSecs.forEach(sKey=>{ if(DB.sectors[sKey]&&!DB.sectors[sKey].members.includes(uid)) DB.sectors[sKey].members.push(uid); });
+  u.sectors = selSecs;
+  dbSave(DB);
+  document.getElementById('m-editUser-tmp')?.remove();
+  buildSidebar(); renderUsers();
+  toast('✅', `${u.name} güncellendi!`);
+}
+
 function removeUser(uid, name) {
+  if(uid==='u0') { toast('🔒','Habib silinemez!'); return; }
   if(!confirm(`${name} kullanıcısı kaldırılsın mı?`)) return;
   DB.users = DB.users.filter(u=>u.id!==uid);
-  Object.values(DB.sectors).forEach(s=>{ s.members = s.members.filter(m=>m!==uid); });
-  dbSave(DB);
-  buildSidebar();
-  renderUsers();
+  Object.values(DB.sectors).forEach(s=>{ s.members=(s.members||[]).filter(m=>m!==uid); });
+  dbSave(DB); buildSidebar(); renderUsers();
   toast('🗑️', `${name} kaldırıldı`);
 }
 
