@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>FlowBoard İz İstihdam v3 — Çok Sektörlü Kanban</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="/socket.io/socket.io.js"></script>
 <link href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700;800&family=Geist+Mono:wght@300;400;500&display=swap" rel="stylesheet">
 <style>
 /* ═══════════ THEME TOKENS ═══════════ */
@@ -447,7 +448,7 @@ input,textarea,select{font-family:var(--ff)}
       <button class="topbar-hamburger" onclick="toggleSB()">☰</button>
       <div class="tb-title" id="pgTitle">Dashboard</div>
       <div class="tb-search"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--t3)" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg><input placeholder="Ara..." id="searchInput" oninput="doSearch(this.value)"></div>
-      <div class="db-indicator"><div class="db-dot"></div>localStorage</div>
+      <div class="db-indicator"><div class="db-dot" id="rt-dot" style="background:#EF4444;box-shadow:0 0 5px #EF4444"></div><span id="rt-status">Bağlanıyor</span> &nbsp;·&nbsp; <span id="online-count">—</span></div>
       <div class="tb-ic" onclick="toggleNotif()">🔔<div class="notif-dot"></div></div>
       <div class="tb-ic" id="roleIc" style="font-size:11px;font-weight:800;color:#3D7FFF">ADM</div>
       <button class="btn btn-primary btn-sm" id="topBtn" onclick="topAction()">+ Ekle</button>
@@ -724,6 +725,10 @@ function dbLoad() {
 
 function dbSave(data) {
   try { localStorage.setItem(DB_KEY, JSON.stringify(data)); } catch(e) {}
+  // Socket.IO ile diger kullanicilara yayinla
+  if(window._socket && window._socket.connected) {
+    window._socket.emit('state_update', data);
+  }
 }
 
 function dbReset() {
@@ -932,6 +937,22 @@ function initApp() {
   buildSidebar();
   buildNotifs();
   goPage('dashboard');
+  // Socket.IO baslat
+  if(!window._socket) initSocketIO();
+  // Kayitli Supabase bilgileriyle otomatik baglan ve Realtime baslt
+  const savedUrl = localStorage.getItem('fb_sb_url');
+  const savedKey = localStorage.getItem('fb_sb_key');
+  if(savedUrl && savedKey) {
+    SB_URL_S = savedUrl;
+    SB_KEY_S = savedKey;
+    sbRealtimeStart();
+    setTimeout(() => {
+      const pushBtn = document.getElementById('sb-push-btn');
+      const pullBtn = document.getElementById('sb-pull-btn');
+      if(pushBtn) pushBtn.style.display = 'inline-flex';
+      if(pullBtn) pullBtn.style.display = 'inline-flex';
+    }, 500);
+  }
 }
 
 function getCurrentUser() {
@@ -2264,6 +2285,62 @@ function toast(ic,msg) {
   t.classList.add('show');
   _tt=setTimeout(()=>t.classList.remove('show'),3200);
 }/* ══════════════════════════════════════════════
+   SOCKET.IO — Real-time sync
+══════════════════════════════════════════════ */
+function initSocketIO() {
+  if(typeof io === 'undefined') return;
+  const socket = io({ transports: ['websocket', 'polling'] });
+  window._socket = socket;
+
+  socket.on('connect', () => {
+    console.log('Socket.IO baglandi:', socket.id);
+    updateOnlineDot(true);
+    // Sunucudan guncel state'i iste
+    socket.emit('request_state');
+  });
+
+  socket.on('disconnect', () => {
+    console.log('Socket.IO baglantisi kesildi');
+    updateOnlineDot(false);
+  });
+
+  // Sunucudan ilk state geldi (sayfa yenileme)
+  socket.on('state_loaded', (data) => {
+    if(!data) return;
+    DB = data;
+    dbSave._skipSocket = true;
+    try { localStorage.setItem(DB_KEY, JSON.stringify(DB)); } catch(e) {}
+    dbSave._skipSocket = false;
+    try { buildSidebar(); } catch(e) {}
+    try { renderCurrentPage(); } catch(e) {}
+    toast('☁️', 'Veriler sunucudan yüklendi');
+  });
+
+  // Baska bir kullanici degisiklik yapti
+  socket.on('state_sync', (data) => {
+    if(!data) return;
+    DB = data;
+    try { localStorage.setItem(DB_KEY, JSON.stringify(DB)); } catch(e) {}
+    try { buildSidebar(); } catch(e) {}
+    try { renderCurrentPage(); } catch(e) {}
+    toast('🔄', 'Canlı güncelleme alındı');
+  });
+
+  // Online kullanici sayisi
+  socket.on('users_online', (count) => {
+    const el = document.getElementById('online-count');
+    if(el) el.textContent = count + ' online';
+  });
+}
+
+function updateOnlineDot(connected) {
+  const dot = document.getElementById('rt-dot');
+  const txt = document.getElementById('rt-status');
+  if(dot) dot.style.background = connected ? '#00C87A' : '#EF4444';
+  if(txt) txt.textContent = connected ? 'Canlı' : 'Bağlantı yok';
+}
+
+/* ══════════════════════════════════════════════
    SUPABASE SYNC — native fetch, no SDK
 ══════════════════════════════════════════════ */
 let SB_URL_S = '', SB_KEY_S = '';
@@ -2327,9 +2404,163 @@ async function sbTestConnect() {
     document.getElementById('sb-push-btn').style.display = 'inline-flex';
     document.getElementById('sb-pull-btn').style.display = 'inline-flex';
     toast('✅', 'Supabase bağlantısı başarılı!');
+    sbRealtimeStart(); // 🔴 Realtime dinlemeyi başlat
   } catch(e) {
     sbSetStatus(false, 'Hata');
     sbShowErr('❌ ' + (e.message||'Bağlantı başarısız'));
+  }
+}
+
+/* ══════════════════════════════════════════════
+   SUPABASE REALTIME — WebSocket ile canlı sync
+══════════════════════════════════════════════ */
+let _sbRtWs = null;
+let _sbRtHeartbeat = null;
+let _sbRtReconnect = null;
+let _sbRtConnected = false;
+let _sbRtRef = 1;
+
+function sbRealtimeStart() {
+  if(!SB_URL_S || !SB_KEY_S) return;
+  sbRealtimeStop();
+  const wsUrl = SB_URL_S.replace(/^https?/, 'wss') + '/realtime/v1/websocket?apikey=' + SB_KEY_S + '&vsn=1.0.0';
+  try {
+    _sbRtWs = new WebSocket(wsUrl);
+  } catch(e) { console.warn('Realtime WS hatası:', e); return; }
+
+  _sbRtWs.onopen = () => {
+    _sbRtConnected = true;
+    sbSetStatus(true, 'Bağlandı ✓ · 🔴 Canlı');
+    // Join realtime channel for all tables
+    const joinMsg = {
+      topic: 'realtime:public',
+      event: 'phx_join',
+      payload: {
+        config: {
+          broadcast: { self: false },
+          presence: { key: '' },
+          postgres_changes: [
+            { event: '*', schema: 'public', table: 'cards' },
+            { event: '*', schema: 'public', table: 'columns' },
+            { event: '*', schema: 'public', table: 'card_assignees' },
+            { event: '*', schema: 'public', table: 'sectors' },
+            { event: '*', schema: 'public', table: 'app_users' },
+          ]
+        }
+      },
+      ref: String(_sbRtRef++)
+    };
+    _sbRtWs.send(JSON.stringify(joinMsg));
+    // Heartbeat her 30 saniyede
+    _sbRtHeartbeat = setInterval(() => {
+      if(_sbRtWs && _sbRtWs.readyState === 1) {
+        _sbRtWs.send(JSON.stringify({ topic: 'phoenix', event: 'heartbeat', payload: {}, ref: String(_sbRtRef++) }));
+      }
+    }, 30000);
+  };
+
+  _sbRtWs.onmessage = (evt) => {
+    let msg;
+    try { msg = JSON.parse(evt.data); } catch { return; }
+    if(msg.event === 'postgres_changes' && msg.payload?.data) {
+      sbRealtimeHandleChange(msg.payload.data);
+    }
+  };
+
+  _sbRtWs.onclose = () => {
+    _sbRtConnected = false;
+    clearInterval(_sbRtHeartbeat);
+    if(SB_URL_S) {
+      sbSetStatus(true, 'Bağlandı ✓ · yeniden bağlanıyor...');
+      _sbRtReconnect = setTimeout(sbRealtimeStart, 5000);
+    }
+  };
+
+  _sbRtWs.onerror = () => {
+    _sbRtConnected = false;
+    sbSetStatus(false, 'Realtime bağlantı hatası');
+  };
+}
+
+function sbRealtimeStop() {
+  clearInterval(_sbRtHeartbeat);
+  clearTimeout(_sbRtReconnect);
+  if(_sbRtWs) { try { _sbRtWs.close(); } catch {} _sbRtWs = null; }
+  _sbRtConnected = false;
+}
+
+async function sbRealtimeHandleChange(change) {
+  const { schema, table, eventType, new: newRow, old: oldRow } = change;
+  if(schema !== 'public') return;
+
+  if(table === 'cards') {
+    if(eventType === 'INSERT' || eventType === 'UPDATE') {
+      const c = newRow;
+      const sKey = c.sector_id;
+      if(!DB.boards[sKey]) return;
+      const asgn = await sbFetch('GET', `card_assignees?card_id=eq.${c.id}&select=user_id`).catch(()=>[]);
+      const card = {
+        id:c.id, title:c.title, prio:c.priority, date:c.due_date, desc:c.description,
+        assignees:(asgn||[]).map(a=>a.user_id),
+        color:c.color, sector:sKey, col:c.column_id,
+        checklist:[], comments:[], log:[{text:'Canlı güncellendi',time:'Şimdi'}],
+      };
+      const idx = DB.boards[sKey].cards.findIndex(x=>x.id===c.id);
+      if(idx>=0) DB.boards[sKey].cards[idx] = card;
+      else DB.boards[sKey].cards.push(card);
+    } else if(eventType === 'DELETE') {
+      const sKey = oldRow?.sector_id;
+      if(sKey && DB.boards[sKey]) {
+        DB.boards[sKey].cards = DB.boards[sKey].cards.filter(x=>x.id!==oldRow.id);
+      }
+    }
+  } else if(table === 'columns') {
+    if(eventType === 'INSERT' || eventType === 'UPDATE') {
+      const c = newRow;
+      const sKey = c.sector_id;
+      if(!DB.boards[sKey]) return;
+      const col = {id:c.id, name:c.name, color:c.color, wip:c.wip, position:c.position};
+      const idx = DB.boards[sKey].cols.findIndex(x=>x.id===c.id);
+      if(idx>=0) DB.boards[sKey].cols[idx] = col;
+      else DB.boards[sKey].cols.push(col);
+    } else if(eventType === 'DELETE') {
+      const sKey = oldRow?.sector_id;
+      if(sKey && DB.boards[sKey]) {
+        DB.boards[sKey].cols = DB.boards[sKey].cols.filter(x=>x.id!==oldRow.id);
+      }
+    }
+  } else if(table === 'card_assignees') {
+    // Atama değiştiğinde ilgili kartı güncelle
+    const cardId = (newRow||oldRow)?.card_id;
+    if(!cardId) return;
+    const asgn = await sbFetch('GET', `card_assignees?card_id=eq.${cardId}&select=user_id`).catch(()=>[]);
+    for(const sKey of Object.keys(DB.boards)) {
+      const card = DB.boards[sKey].cards.find(x=>x.id===cardId);
+      if(card) { card.assignees = (asgn||[]).map(a=>a.user_id); break; }
+    }
+  }
+
+  // DB'yi kaydet ve ekranı yenile
+  dbSave(DB);
+  try { renderCurrentPage(); } catch {}
+  // Küçük bildirim (başka kullanıcıdan gelen değişiklik)
+  if(eventType === 'INSERT' && table === 'cards') toast('🔄', 'Yeni kart eklendi (canlı)');
+  else if(eventType === 'UPDATE' && table === 'cards') toast('🔄', 'Kart güncellendi (canlı)');
+  else if(eventType === 'DELETE' && table === 'cards') toast('🗑️', 'Kart silindi (canlı)');
+}
+
+// Mevcut sayfayı yeniden render et
+function renderCurrentPage() {
+  const active = document.querySelector('.nav-item.active');
+  if(!active) return;
+  const page = active.dataset?.page || active.onclick?.toString().match(/goPage\('(\w+)'\)/)?.[1];
+  if(page) goPage(page);
+  else {
+    const board = document.querySelector('.board-wrap');
+    if(board) {
+      const sKey = board.dataset?.sector;
+      if(sKey) renderBoard(sKey);
+    }
   }
 }
 
