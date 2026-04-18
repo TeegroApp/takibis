@@ -405,19 +405,47 @@ input,textarea,select{font-family:var(--ff)}
       <div class="login-title">İz İstihdam</div>
       <div class="login-sub">Özel İş Takip Sistemi</div>
     </div>
-    <div class="login-fields">
-      <div class="lf"><label>E-posta veya Kullanıcı Adı</label><input id="le" placeholder="email@sirket.com veya kullanici.adi" autocomplete="email"></div>
-      <div class="lf"><label>Şifre</label>
-        <div style="position:relative">
-          <input type="password" id="lp" placeholder="••••••••" autocomplete="current-password" style="width:100%">
-          <span onclick="togglePassVis('lp',this)" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);cursor:pointer;font-size:14px;color:var(--t3)">👁️</span>
+
+    <!-- Auth tabs -->
+    <div style="display:flex;margin:0 32px 20px;background:var(--bg2);border:1px solid var(--rim);border-radius:9px;padding:3px;gap:3px">
+      <button id="tab-login" onclick="switchAuthTab('login')" style="flex:1;padding:8px;border-radius:7px;border:none;font-size:13px;font-weight:700;cursor:pointer;background:var(--bg4);color:var(--t0);transition:all .15s">Giriş Yap</button>
+      <button id="tab-register" onclick="switchAuthTab('register')" style="flex:1;padding:8px;border-radius:7px;border:none;font-size:13px;font-weight:700;cursor:pointer;background:transparent;color:var(--t2);transition:all .15s">Kayıt Ol</button>
+    </div>
+
+    <!-- Login form -->
+    <div id="form-login">
+      <div class="login-fields">
+        <div class="lf"><label>Kullanıcı Adı</label><input id="le" placeholder="kullanici.adi" autocomplete="username"></div>
+        <div class="lf"><label>Şifre</label>
+          <div style="position:relative">
+            <input type="password" id="lp" placeholder="••••••••" autocomplete="current-password" style="width:100%">
+            <span onclick="togglePassVis('lp',this)" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);cursor:pointer;font-size:14px;color:var(--t3)">👁️</span>
+          </div>
         </div>
       </div>
+      <div id="loginErr" style="display:none;margin:0 32px 12px;padding:9px 14px;background:rgba(255,69,96,.1);border:1px solid rgba(255,69,96,.2);border-radius:8px;font-size:12px;color:#FF8080;text-align:center"></div>
+      <div style="padding:0 32px 24px"><button class="login-btn" onclick="doLogin()">Giriş Yap →</button></div>
     </div>
-    <div id="loginErr" style="display:none;margin:0 32px 12px;padding:9px 14px;background:rgba(255,69,96,.1);border:1px solid rgba(255,69,96,.2);border-radius:8px;font-size:12px;color:#FF8080;text-align:center"></div>
-    <div style="padding:0 32px 20px"><button class="login-btn" onclick="doLogin()">Giriş Yap →</button></div>
-    <div style="padding:0 32px 20px;text-align:center">
-      <span style="font-size:11px;color:var(--t3);cursor:pointer;text-decoration:underline" onclick="resetAndReload()">Veriyi sıfırla (ilk kurulum)</span>
+
+    <!-- Register form -->
+    <div id="form-register" style="display:none">
+      <div class="login-fields">
+        <div class="lf"><label>Kullanıcı Adı</label><input id="re" placeholder="kullanici.adi" autocomplete="username"></div>
+        <div class="lf"><label>Şifre</label>
+          <div style="position:relative">
+            <input type="password" id="rp" placeholder="En az 6 karakter" autocomplete="new-password" style="width:100%">
+            <span onclick="togglePassVis('rp',this)" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);cursor:pointer;font-size:14px;color:var(--t3)">👁️</span>
+          </div>
+        </div>
+        <div class="lf"><label>Şifre Tekrar</label>
+          <div style="position:relative">
+            <input type="password" id="rp2" placeholder="Şifreyi tekrar girin" autocomplete="new-password" style="width:100%">
+            <span onclick="togglePassVis('rp2',this)" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);cursor:pointer;font-size:14px;color:var(--t3)">👁️</span>
+          </div>
+        </div>
+      </div>
+      <div id="registerErr" style="display:none;margin:0 32px 12px;padding:9px 14px;background:rgba(255,69,96,.1);border:1px solid rgba(255,69,96,.2);border-radius:8px;font-size:12px;color:#FF8080;text-align:center"></div>
+      <div style="padding:0 32px 24px"><button class="login-btn" onclick="doRegister()">Kayıt Ol →</button></div>
     </div>
   </div>
 </div>
@@ -824,29 +852,128 @@ function selRole(role, el) {
   el.classList.add('sel');
 }
 
-function doLogin() {
-  const input = (document.getElementById('le')?.value||'').trim().toLowerCase();
-  const pass  = (document.getElementById('lp')?.value||'').trim();
-  const errEl = document.getElementById('loginErr');
+/* ── Auth tab switcher ─────────────────────────────────────────────────────── */
+function switchAuthTab(tab) {
+  const isLogin = tab === 'login';
+  document.getElementById('form-login').style.display    = isLogin ? '' : 'none';
+  document.getElementById('form-register').style.display = isLogin ? 'none' : '';
+  document.getElementById('tab-login').style.background    = isLogin ? 'var(--bg4)' : 'transparent';
+  document.getElementById('tab-login').style.color         = isLogin ? 'var(--t0)'  : 'var(--t2)';
+  document.getElementById('tab-register').style.background = isLogin ? 'transparent' : 'var(--bg4)';
+  document.getElementById('tab-register').style.color      = isLogin ? 'var(--t2)'  : 'var(--t0)';
+}
 
-  // E-posta VEYA kullanıcı adı ile giriş
-  const user = DB.users.find(u =>
-    u.email.toLowerCase() === input ||
-    (u.username||'').toLowerCase() === input
-  );
+/* ── Enter-key helpers ─────────────────────────────────────────────────────── */
+document.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('lp')?.addEventListener('keydown',  e => { if(e.key==='Enter') doLogin(); });
+  document.getElementById('le')?.addEventListener('keydown',  e => { if(e.key==='Enter') document.getElementById('lp')?.focus(); });
+  document.getElementById('rp')?.addEventListener('keydown',  e => { if(e.key==='Enter') document.getElementById('rp2')?.focus(); });
+  document.getElementById('rp2')?.addEventListener('keydown', e => { if(e.key==='Enter') doRegister(); });
+  document.getElementById('re')?.addEventListener('keydown',  e => { if(e.key==='Enter') document.getElementById('rp')?.focus(); });
 
-  if(!user) {
-    errEl.textContent = '❌ E-posta veya kullanıcı adı bulunamadı.';
-    errEl.style.display = 'block'; return;
+  // Auto-login if token is still valid
+  const savedToken = localStorage.getItem('auth_token');
+  if(savedToken) {
+    try {
+      const payload = JSON.parse(atob(savedToken.split('.')[1]));
+      if(payload.exp * 1000 > Date.now()) {
+        window._authToken    = savedToken;
+        window._authUsername = payload.username;
+        window._authUserId   = payload.id;
+        enterApp();
+        return;
+      }
+    } catch(e) {}
+    localStorage.removeItem('auth_token');
   }
-  if(user.password && user.password !== pass) {
-    errEl.textContent = '❌ Şifre yanlış.';
-    errEl.style.display = 'block'; return;
-  }
+});
 
+/* ── Login (API) ───────────────────────────────────────────────────────────── */
+async function doLogin() {
+  const username = (document.getElementById('le')?.value||'').trim();
+  const password = (document.getElementById('lp')?.value||'').trim();
+  const errEl    = document.getElementById('loginErr');
   errEl.style.display = 'none';
-  currentRole = user.role;
-  currentUserId = user.id;
+
+  if(!username || !password) {
+    errEl.textContent = '❌ Kullanıcı adı ve şifre zorunludur.';
+    errEl.style.display = 'block'; return;
+  }
+
+  try {
+    const res  = await fetch('/api/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username, password })
+    });
+    const data = await res.json();
+    if(!res.ok) {
+      errEl.textContent = '❌ ' + (data.error || 'Giriş başarısız.');
+      errEl.style.display = 'block'; return;
+    }
+    localStorage.setItem('auth_token', data.token);
+    window._authToken    = data.token;
+    window._authUsername = data.username;
+    window._authUserId   = data.id;
+    enterApp();
+  } catch(e) {
+    errEl.textContent = '❌ Sunucuya bağlanılamadı.';
+    errEl.style.display = 'block';
+  }
+}
+
+/* ── Register (API) ────────────────────────────────────────────────────────── */
+async function doRegister() {
+  const username = (document.getElementById('re')?.value||'').trim();
+  const password = (document.getElementById('rp')?.value||'').trim();
+  const password2= (document.getElementById('rp2')?.value||'').trim();
+  const errEl    = document.getElementById('registerErr');
+  errEl.style.display = 'none';
+
+  if(!username || !password || !password2) {
+    errEl.textContent = '❌ Tüm alanlar zorunludur.';
+    errEl.style.display = 'block'; return;
+  }
+  if(password !== password2) {
+    errEl.textContent = '❌ Şifreler eşleşmiyor.';
+    errEl.style.display = 'block'; return;
+  }
+  if(password.length < 6) {
+    errEl.textContent = '❌ Şifre en az 6 karakter olmalıdır.';
+    errEl.style.display = 'block'; return;
+  }
+
+  try {
+    const res  = await fetch('/api/register', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username, password })
+    });
+    const data = await res.json();
+    if(!res.ok) {
+      errEl.textContent = '❌ ' + (data.error || 'Kayıt başarısız.');
+      errEl.style.display = 'block'; return;
+    }
+    localStorage.setItem('auth_token', data.token);
+    window._authToken    = data.token;
+    window._authUsername = data.username;
+    window._authUserId   = data.id;
+    enterApp();
+  } catch(e) {
+    errEl.textContent = '❌ Sunucuya bağlanılamadı.';
+    errEl.style.display = 'block';
+  }
+}
+
+/* ── Enter the app after successful auth ───────────────────────────────────── */
+function enterApp() {
+  // Map authenticated user to the first matching DB user, or default to superadmin
+  const matched = DB.users.find(u =>
+    (u.username||'').toLowerCase() === (window._authUsername||'').toLowerCase() ||
+    (u.email||'').toLowerCase() === (window._authUsername||'').toLowerCase()
+  );
+  currentRole   = matched ? matched.role : 'superadmin';
+  currentUserId = matched ? matched.id   : (DB.users[0]?.id || 'u0');
   document.getElementById('s-login').classList.remove('active');
   document.getElementById('s-app').classList.add('active');
   initApp();
@@ -855,6 +982,7 @@ function doLogin() {
 function resetAndReload() {
   if(confirm('Tüm veriler sıfırlanacak ve yeni sistem kurulacak. Devam?')) {
     localStorage.removeItem(DB_KEY);
+    localStorage.removeItem('auth_token');
     location.reload();
   }
 }
@@ -890,15 +1018,7 @@ function togglePassVis(inputId, btn) {
   else { inp.type = 'password'; btn.textContent = '👁️'; }
 }
 
-// Enter tuşu ile giriş
-document.addEventListener('DOMContentLoaded', () => {
-  document.getElementById('lp')?.addEventListener('keydown', e => {
-    if(e.key === 'Enter') doLogin();
-  });
-  document.getElementById('le')?.addEventListener('keydown', e => {
-    if(e.key === 'Enter') document.getElementById('lp')?.focus();
-  });
-});
+// (Enter-key listeners are registered in the DOMContentLoaded block above)
 
 function quickLogin(role) {
   // Sadece geliştirme için — production'da kaldırılabilir
@@ -913,12 +1033,18 @@ function quickLogin(role) {
 
 function logout() {
   currentUserId = null;
+  localStorage.removeItem('auth_token');
+  window._authToken    = null;
+  window._authUsername = null;
+  window._authUserId   = null;
+  if(window._socket) { window._socket.disconnect(); window._socket = null; }
   document.getElementById('s-app').classList.remove('active');
   document.getElementById('s-login').classList.add('active');
   const errEl = document.getElementById('loginErr');
   if(errEl) errEl.style.display = 'none';
   document.getElementById('le').value = '';
   document.getElementById('lp').value = '';
+  switchAuthTab('login');
 }
 
 /* ══════════════════════════════════════════════
@@ -2289,8 +2415,14 @@ function toast(ic,msg) {
 ══════════════════════════════════════════════ */
 function initSocketIO() {
   if(typeof io === 'undefined') return;
-  const socket = io({ transports: ['websocket', 'polling'] });
+  const token = window._authToken || localStorage.getItem('auth_token') || '';
+  const socket = io({ transports: ['websocket', 'polling'], auth: { token } });
   window._socket = socket;
+
+  socket.on('connect_error', (err) => {
+    console.warn('Socket.IO bağlantı hatası:', err.message);
+    updateOnlineDot(false);
+  });
 
   socket.on('connect', () => {
     console.log('Socket.IO baglandi:', socket.id);
