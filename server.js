@@ -32,6 +32,21 @@ async function initDB() {
       );
     `);
     console.log('DB tablolari hazir.');
+
+    const superadminCheck = await pool.query(
+      'SELECT id FROM users WHERE username = $1',
+      ['superadmin']
+    );
+    if (superadminCheck.rows.length === 0) {
+      const hash = await bcrypt.hash('superadmin123', 12);
+      await pool.query(
+        'INSERT INTO users (username, password_hash) VALUES ($1, $2)',
+        ['superadmin', hash]
+      );
+      console.log('Superadmin kullanicisi olusturuldu.');
+    } else {
+      console.log('Superadmin kullanicisi zaten mevcut.');
+    }
   } catch (e) { console.error('DB init hatasi:', e.message); }
 }
 
